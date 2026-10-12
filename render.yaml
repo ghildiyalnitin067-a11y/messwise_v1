@@ -31,6 +31,12 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://messwise-api.onrender.com/api/v1
+      - key: VITE_STUDENT_PORTAL_URL
+        value: https://messwise-student.vercel.app
+      - key: VITE_ADMIN_PORTAL_URL
+        value: https://messwise-admin.vercel.app
+      - key: VITE_NGO_PORTAL_URL
+        value: https://messwise-ngo.vercel.app
     routes:
       - type: rewrite
         source: /*
