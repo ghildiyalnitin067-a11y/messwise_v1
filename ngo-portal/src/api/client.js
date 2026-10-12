@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+const rawEnvUrl = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1').trim().replace(/\/+$/, '');
+const API_BASE_URL = rawEnvUrl.endsWith('/api/v1') ? rawEnvUrl : `${rawEnvUrl}/api/v1`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 3000,
+  timeout: 45000,
 });
 
 api.interceptors.request.use((config) => {
