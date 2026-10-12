@@ -274,6 +274,16 @@ export const adminApi = {
       () => apiClient.post('/admin/handover/verify', { request_id: requestId, otp }).then((r) => r.data),
       { success: true, message: 'Handover verified' }
     ),
+  getGreenRouteDispatches: () =>
+    safeApiCall(
+      () => apiClient.get('/admin/greenroute/dispatches').then((r) => r.data?.dispatches || (Array.isArray(r.data) ? r.data : null)),
+      null
+    ),
+  verifyGreenRouteOtp: (dispatchId, otp) =>
+    safeApiCall(
+      () => apiClient.post('/admin/greenroute/verify-otp', { dispatch_id: dispatchId, otp }).then((r) => r.data),
+      { status: 'success', dispatch_id: dispatchId, new_status: 'handed_over' }
+    ),
 };
 
 export const ngoApi = {

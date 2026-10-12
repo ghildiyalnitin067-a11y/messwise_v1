@@ -32,7 +32,8 @@ const NgoPortal = () => {
   const handleClaimSubmit = async (surplusId, details) => {
     const res = await requestSurplus(surplusId, details);
     if (res) {
-      alert(`✅ Pickup Dispatched!\nBatch: ${res.food_title}\nHandover OTP: ${res.otp}\nDriver must present this 4-digit code at kitchen counter.`);
+      const riderName = details.volunteer_name || 'Volunteer Driver';
+      alert(`✅ Pickup Dispatched to GreenRoute Fleet!\nBatch: ${res.food_title}\nAssigned Rider: ${riderName}\nVehicle: ${details.vehicle || 'Electric Van'}\nHandover OTP: ${res.otp}\nDriver must present this 4-digit code at kitchen counter.`);
       setSelectedSurplusForClaim(null);
       setActiveTab('requests');
     }

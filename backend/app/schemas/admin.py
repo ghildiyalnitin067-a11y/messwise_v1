@@ -72,11 +72,14 @@ class WasteHeatmapResponse(BaseModel):
 
 
 class SurplusPublishRequest(BaseModel):
-    title: str
-    meals: int = Field(gt=0)
+    title: Optional[str] = None
+    food_title: Optional[str] = None
+    meals: Optional[int] = None
+    meals_available: Optional[int] = None
     hostel: Optional[str] = None
     location_detail: Optional[str] = None
-    temp_celsius: int = 65
+    temp_celsius: Optional[int] = 65
+    storage_temperature: Optional[float] = None
     prep_time: Optional[str] = "Just now"
     pickup_deadline: Optional[str] = "5:00 PM"
     storage_condition: Optional[str] = "Insulated Stainless Steel Warmer"

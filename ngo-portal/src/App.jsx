@@ -10,7 +10,8 @@ import {
   Check, 
   Send,
   LogOut,
-  LogIn
+  LogIn,
+  RefreshCw
 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import RequestModal from './components/RequestModal';
@@ -70,31 +71,127 @@ function App() {
   const [distPeople, setDistPeople] = useState(25);
   const [distLocation, setDistLocation] = useState('Community Shelter #4, Sector 12');
   const [distSuccess, setDistSuccess] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchSurplusData = async () => {
+    try {
+      const res = await ngoApi.getAvailableSurplus();
+      if (res?.items && Array.isArray(res.items)) {
+        setSurplusListings(res.items);
+      }
+      const reqs = await ngoApi.getMyRequests();
+      if (reqs && Array.isArray(reqs)) {
+        setNgoRequests(reqs);
+      }
+    } catch (e) {
+      console.warn('Error fetching NGO surplus data:', e);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchSurplusData();
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
 
   useEffect(() => {
-    ngoApi.getAvailableSurplus().then((res) => {
-      if (res?.items) setSurplusListings(res.items);
-    });
-    ngoApi.getMyRequests().then((reqs) => {
-      if (reqs?.length) setNgoRequests(reqs);
-    });
+    fetchSurplusData();
+
+    // Auto-poll every 3.5 seconds for instant real-time synchronization with admin portal
+    const pollInterval = setInterval(fetchSurplusData, 3500);
+
+    // Cross-tab broadcast channel for instantaneous sync across browser tabs
+    let bc;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.onmessage = (event) => {
+          if (event.data?.type === 'SURPLUS_PUBLISHED') {
+            fetchSurplusData();
+          }
+        };
+      }
+    } catch {}
+
+    const handleWindowFocus = () => fetchSurplusData();
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (bc) bc.close();
+      window.removeEventListener('focus', handleWindowFocus);
+    };
   }, []);
 
   const handleClaimSubmit = async (surplusId, details) => {
     const surplus = surplusListings.find((s) => s.id === surplusId);
     if (!surplus) return;
 
+    const plateMatch = (details.vehicle || '').match(/\(([^)]+)\)/);
+    const licensePlate = plateMatch ? plateMatch[1] : 'DL 3S PR 9021';
+    const riderName = details.volunteer_name || 'Pranav';
+    const reqOtp = surplus.pickup_otp || '8294';
+
     const newReq = {
       id: `req-${Date.now()}`,
       surplus_id: surplus.id,
       food_title: surplus.title,
       meals: surplus.meals,
-      hostel: surplus.hostel,
-      volunteer_name: details.volunteer_name || 'Volunteer Driver',
-      vehicle: details.vehicle || 'Electric Van',
-      status: 'Pending Approval',
-      pickup_time_estimated: details.eta || 'Within 30 mins',
-      otp: surplus.pickup_otp || '7412',
+      hostel: surplus.hostel || 'Hostel A',
+      volunteer_name: riderName,
+      vehicle: details.vehicle || 'Electric Scooter (DL 3S PR 9021)',
+      status: 'Approved',
+      pickup_time_estimated: details.eta || 'Within 15 mins',
+      otp: reqOtp,
+    };
+
+    const newDispatch = {
+      id: `GR-DISP-${Date.now().toString().slice(-4)}`,
+      surplusId: surplus.id,
+      surplus_id: surplus.id,
+      batchTitle: surplus.title,
+      batch_title: surplus.title,
+      portions: surplus.meals,
+      foodType: surplus.food_type || 'Fresh Cooked Surplus',
+      food_type: surplus.food_type || 'Fresh Cooked Surplus',
+      hostel: surplus.hostel || 'Hostel A (Aryabhatta)',
+      pickupLocation: surplus.location_detail || 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
+      pickup_location: surplus.location_detail || 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
+      targetNgo: 'Helping Hands NGO',
+      target_ngo: 'Helping Hands NGO',
+      distanceKm: surplus.distance_km || 1.2,
+      distance_km: surplus.distance_km || 1.2,
+      platform: 'Blinkit',
+      platformTag: 'Blinkit Instant Dispatch',
+      platformBrandColor: '#F8CB46',
+      platformTextColor: '#0F172A',
+      rider: {
+        id: `RDR-${Math.floor(100 + Math.random() * 899)}`,
+        name: riderName,
+        phone: '+91 98450 12345',
+        rating: 4.95,
+        totalDeliveries: 1120,
+        avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+        vehicleType: details.vehicle || 'Electric Scooter (DL 3S PR 9021)',
+        vehicle_type: details.vehicle || 'Electric Scooter (DL 3S PR 9021)',
+        licensePlate: licensePlate,
+        license_plate: licensePlate,
+        batteryPercent: 92,
+        battery_percent: 92,
+      },
+      otp: reqOtp,
+      otpVerified: false,
+      status: 'arriving',
+      etaMinutes: 3,
+      eta_minutes: 3,
+      timeline: [
+        { step: 'searching', title: 'Searching Partner', desc: 'Broadcast matched with Helping Hands NGO', time: 'Just now' },
+        { step: 'assigned', title: 'Rider Assigned', desc: `${riderName} confirmed dispatch order`, time: 'Just now' },
+        { step: 'arriving', title: 'Arriving at Mess', desc: `Approaching Mess Dispatch Bay 2 (${details.eta || 'Within 15 mins'})`, time: 'In transit' },
+        { step: 'handed_over', title: 'Food Handed Over / En Route', desc: 'Pending OTP handover verification', time: 'Est. in 10 mins' },
+      ],
+      temperatureLogged: `${surplus.temp_celsius || 68}°C (Insulated Casseroles)`,
+      pickupDeadline: surplus.pickup_deadline || '5:00 PM',
     };
 
     setNgoRequests((prev) => [newReq, ...prev]);
@@ -103,10 +200,35 @@ function App() {
     );
 
     try {
+      const existingDispatches = JSON.parse(localStorage.getItem('messwise_greenroute_dispatches') || '[]');
+      localStorage.setItem('messwise_greenroute_dispatches', JSON.stringify([newDispatch, ...existingDispatches]));
+
+      const existingReqs = JSON.parse(localStorage.getItem('messwise_ngo_requests') || '[]');
+      localStorage.setItem('messwise_ngo_requests', JSON.stringify([newReq, ...existingReqs]));
+
+      window.dispatchEvent(new CustomEvent('messwise-dispatch-updated', { detail: newDispatch }));
+    } catch {}
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.postMessage({
+          type: 'RIDER_ASSIGNED',
+          claim: newReq,
+          dispatch: newDispatch,
+          riderName: riderName,
+          vehicle: details.vehicle,
+          surplusId: surplus.id,
+        });
+        bc.close();
+      }
+    } catch {}
+
+    try {
       await ngoApi.requestSurplus(surplusId, details);
     } catch {}
 
-    alert(`✅ Pickup Dispatched!\nBatch: ${surplus.title}\nHandover OTP: ${newReq.otp}\nDriver must present this 4-digit code at kitchen counter.`);
+    alert(`✅ Pickup Dispatched!\nBatch: ${surplus.title}\nAssigned Rider: ${riderName}\nHandover OTP: ${newReq.otp}\nDriver must present this 4-digit code at kitchen counter.`);
     setSelectedSurplusForClaim(null);
     setActiveTab('requests');
   };
@@ -228,7 +350,16 @@ function App() {
                   <Sparkles size={16} />
                   <span>Live Surplus Batches Available for Claim</span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <button
+                    onClick={handleManualRefresh}
+                    className="btn btn-secondary btn-sm"
+                    title="Refresh live surplus availability"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
+                    <span>Refresh Feed</span>
+                  </button>
                   {['all', 'Vegetarian', 'Non-Vegetarian'].map((filter) => (
                     <button
                       key={filter}

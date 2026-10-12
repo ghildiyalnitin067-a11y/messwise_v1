@@ -5,7 +5,8 @@ import {
   TrendingUp, 
   Sparkles, 
   ShieldCheck, 
-  LogOut 
+  LogOut,
+  Bike
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
@@ -33,6 +34,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <LayoutDashboard size={16} />
             <span>Dashboard</span>
           </div>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'greenroute' ? 'active' : ''}`}
+          onClick={() => onTabChange('greenroute')}
+        >
+          <div className="nav-label">
+            <Bike size={16} />
+            <span>GreenRoute Fleet</span>
+          </div>
+          <span className="nav-badge">Live</span>
         </button>
 
         <button

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ChefHat, 
   TrendingUp, 
@@ -10,12 +10,22 @@ import {
   Truck,
   LogOut,
   LogIn,
-  CheckCircle2
+  CheckCircle2,
+  Bike
 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import HandoverModal from './components/HandoverModal';
 import LoginModal from './components/LoginModal';
+import GreenRouteTracker from './components/GreenRouteTracker';
 import { adminApi, authApi } from './api/client';
+
+export const INITIAL_PRODUCTION_LOGS = [
+  { id: 'log-1', date: 'Today (Lunch)', menu: 'Rajma + Steamed Rice + Roti', p: 842, s: 817, sur: 25, w: 6.0, prepared: 842, served: 817, surplus: 25, waste: 6.0, status: 'Active Log', isSurplus: false },
+  { id: 'log-2', date: 'Today (Breakfast)', menu: 'Poha + Milk + Banana', p: 480, s: 472, sur: 8, w: 2.2, prepared: 480, served: 472, surplus: 8, waste: 2.2, status: 'Completed', isSurplus: false },
+  { id: 'log-3', date: 'Yesterday (Dinner)', menu: 'Dal Tadka + Roti + Rice', p: 610, s: 598, sur: 12, w: 4.8, prepared: 610, served: 598, surplus: 12, waste: 4.8, status: 'Completed', isSurplus: false },
+  { id: 'log-4', date: 'Yesterday (Lunch)', menu: 'Chole Bhature + Rice', p: 820, s: 795, sur: 25, w: 7.4, prepared: 820, served: 795, surplus: 25, waste: 7.4, status: 'Completed', isSurplus: false },
+  { id: 'log-5', date: '14 Sep (Dinner)', menu: 'Veg Pulao + Kadhi', p: 580, s: 565, sur: 15, w: 3.9, prepared: 580, served: 565, surplus: 15, waste: 3.9, status: 'Completed', isSurplus: false },
+];
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -45,6 +55,18 @@ function App() {
   });
 
   const [ngoRequests, setNgoRequests] = useState([
+    {
+      id: 'req-102',
+      surplus_id: 'surplus-chapati',
+      food_title: 'Fresh Chapati',
+      meals: 50,
+      hostel: 'Hostel A',
+      volunteer_name: 'Pranav',
+      vehicle: 'Electric Scooter (DL 3S PR 9021)',
+      status: 'Approved',
+      pickup_time_estimated: '1:20 PM',
+      otp: '8294',
+    },
     {
       id: 'req-101',
       surplus_id: 'surplus-1',
@@ -78,10 +100,170 @@ function App() {
 
   const leftover = Math.max(0, Number(prepQty) - Number(servQty));
 
+  const [productionLogs, setProductionLogs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('messwise_production_logs');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_PRODUCTION_LOGS;
+  });
+
+  const allProductionLogs = useMemo(() => {
+    const list = [...(productionLogs || [])];
+    const seenTitles = new Set(list.map((l) => (l.menu || '').toLowerCase().trim()));
+    let surplusItems = [];
+    try {
+      surplusItems = JSON.parse(localStorage.getItem('messwise_surplus_listings') || '[]');
+    } catch {}
+    (surplusItems || []).forEach((s) => {
+      const cleanTitle = (s.title || '').toLowerCase().trim();
+      if (cleanTitle && !seenTitles.has(cleanTitle)) {
+        seenTitles.add(cleanTitle);
+        const mealsCount = Number(s.meals) || 20;
+        list.unshift({
+          id: `surplus-log-${s.id}`,
+          date: 'Surplus Queue Active',
+          menu: s.title,
+          p: mealsCount + 30,
+          s: 30,
+          sur: mealsCount,
+          w: Number((mealsCount * 0.04).toFixed(1)),
+          prepared: mealsCount + 30,
+          served: 30,
+          surplus: mealsCount,
+          waste: Number((mealsCount * 0.04).toFixed(1)),
+          status: s.status === 'Requested' ? 'NGO Matched' : s.status === 'PickedUp' ? 'Collected' : 'Surplus Queue Active',
+          isSurplus: true,
+          surplusId: s.id,
+        });
+      }
+    });
+    return list;
+  }, [productionLogs]);
+
+  const fetchNgoRequests = async () => {
+    try {
+      const data = await adminApi.getNgoRequests();
+      const localReqs = JSON.parse(localStorage.getItem('messwise_ngo_requests') || '[]');
+      const combined = [...(data && Array.isArray(data) ? data : []), ...localReqs];
+      if (combined.length > 0) {
+        setNgoRequests((prev) => {
+          const map = new Map();
+          combined.forEach((item) => {
+            if (item && item.id && !map.has(item.id)) {
+              map.set(item.id, item);
+            }
+          });
+          prev.forEach((item) => {
+            if (item && item.id && !map.has(item.id)) {
+              map.set(item.id, item);
+            }
+          });
+          return Array.from(map.values());
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to fetch admin requests:', err);
+    }
+  };
+
   useEffect(() => {
     adminApi.getStats().then((res) => {
       if (res) setAdminStats(res);
     });
+
+    fetchNgoRequests();
+    const pollInterval = setInterval(fetchNgoRequests, 3500);
+
+    let bc;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.onmessage = (event) => {
+          if (
+            event.data?.type === 'RIDER_ASSIGNED' ||
+            event.data?.type === 'CLAIM_SUBMITTED' ||
+            event.data?.type === 'SURPLUS_CLAIMED'
+          ) {
+            if (event.data?.claim) {
+              setNgoRequests((prev) => [
+                event.data.claim,
+                ...prev.filter((r) => r.id !== event.data.claim.id),
+              ]);
+            }
+            if (event.data?.dispatch) {
+              window.dispatchEvent(
+                new CustomEvent('messwise-dispatch-updated', {
+                  detail: event.data.dispatch,
+                })
+              );
+            }
+            fetchNgoRequests();
+          }
+
+          if (event.data?.type === 'SURPLUS_PUBLISHED') {
+            const dish = event.data?.dish;
+            if (dish) {
+              const mealsCount = Number(dish.meals) || 20;
+              const logItem = {
+                id: `prod-surplus-${dish.id || Date.now()}`,
+                date: 'Surplus Queue Active',
+                menu: dish.title,
+                p: mealsCount + 30,
+                s: 30,
+                sur: mealsCount,
+                w: Number((mealsCount * 0.04).toFixed(1)),
+                prepared: mealsCount + 30,
+                served: 30,
+                surplus: mealsCount,
+                waste: Number((mealsCount * 0.04).toFixed(1)),
+                status: 'Surplus Queue Active',
+                isSurplus: true,
+                surplusId: dish.id,
+              };
+              setProductionLogs((prev) => {
+                if (prev.some((p) => (p.menu || '').toLowerCase().trim() === (dish.title || '').toLowerCase().trim())) {
+                  return prev;
+                }
+                const updated = [logItem, ...prev];
+                try {
+                  localStorage.setItem('messwise_production_logs', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
+          }
+        };
+      }
+    } catch {}
+
+    const handleFocus = () => {
+      fetchNgoRequests();
+      try {
+        const saved = localStorage.getItem('messwise_production_logs');
+        if (saved) setProductionLogs(JSON.parse(saved));
+      } catch {}
+    };
+    window.addEventListener('focus', handleFocus);
+
+    const handleStorage = (e) => {
+      if (e.key === 'messwise_ngo_requests') {
+        fetchNgoRequests();
+      }
+      if (e.key === 'messwise_production_logs' && e.newValue) {
+        try {
+          setProductionLogs(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (bc) bc.close();
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const handleSimulateForecast = async () => {
@@ -132,6 +314,28 @@ function App() {
           waste: wasteQty,
         },
       }));
+      const newManualLog = {
+        id: `manual-log-${Date.now()}`,
+        date: `Today (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+        menu: 'Lunch Batch (Rajma + Steamed Rice + Roti)',
+        p: Number(prepQty),
+        s: Number(servQty),
+        sur: leftover,
+        w: Number(wasteQty),
+        prepared: Number(prepQty),
+        served: Number(servQty),
+        surplus: leftover,
+        waste: Number(wasteQty),
+        status: 'Completed',
+        isSurplus: false,
+      };
+      setProductionLogs((prev) => {
+        const next = [newManualLog, ...prev];
+        try {
+          localStorage.setItem('messwise_production_logs', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
       setProdSuccess(true);
       setTimeout(() => setProdSuccess(false), 3000);
     } catch {}
@@ -139,19 +343,139 @@ function App() {
 
   const handlePublishSurplus = async (e) => {
     e.preventDefault();
+    const newDispatchId = `GR-DISP-${Math.floor(800 + Math.random() * 199)}`;
+    const isChapatiBatch = newSurplus.title.toLowerCase().includes('chapati');
+    const assignedRiderName = isChapatiBatch ? 'Pranav' : 'Pranav';
+    
+    const createdDispatch = {
+      id: newDispatchId,
+      surplusId: `surplus-${Date.now()}`,
+      batchTitle: newSurplus.title,
+      portions: Number(newSurplus.meals) || 25,
+      foodType: 'Fresh Kitchen Surplus',
+      hostel: adminStats.mess_name.split(' - ')[0] || 'Hostel A',
+      pickupLocation: newSurplus.location_detail || 'Central Mess Dispatch Bay 2',
+      targetNgo: 'Robin Hood Army & Jan Seva Shelter',
+      distanceKm: 1.2,
+      platform: 'Blinkit',
+      platformBrandColor: '#F8CB46',
+      platformTextColor: '#0F172A',
+      platformTag: 'Blinkit Instant Dispatch',
+      rider: {
+        id: 'RDR-502',
+        name: assignedRiderName,
+        phone: '+91 98450 12345',
+        rating: 4.95,
+        totalDeliveries: 1120,
+        avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+        vehicleType: 'Electric Scooter (Ather 450X)',
+        vehicleCategory: 'EV Two-Wheeler',
+        licensePlate: 'DL 3S PR 9021',
+        batteryPercent: 89,
+      },
+      otp: '8294',
+      otpVerified: false,
+      status: 'arriving',
+      etaMinutes: 3,
+      timeline: [
+        { step: 'searching', title: 'Searching Partner', desc: `Broadcast active for ${newSurplus.title}`, time: 'Just now' },
+        { step: 'assigned', title: 'Rider Assigned', desc: `${assignedRiderName} confirmed dispatch order`, time: 'Just now' },
+        { step: 'arriving', title: 'Arriving at Mess', desc: '0.6 km away • Approaching Gate 4 Ramp', time: 'Est. in 3 mins' },
+        { step: 'handed_over', title: 'Food Handed Over / En Route', desc: 'Pending OTP handover verification', time: 'Est. in 10 mins' }
+      ],
+      temperatureLogged: '68°C (Insulated Casseroles)',
+      pickupDeadline: newSurplus.pickup_deadline
+    };
+
+    const newNgoReq = {
+      id: `req-${Date.now()}`,
+      surplus_id: createdDispatch.surplusId,
+      food_title: newSurplus.title,
+      meals: Number(newSurplus.meals) || 25,
+      hostel: createdDispatch.hostel,
+      volunteer_name: assignedRiderName,
+      vehicle: 'Electric Scooter (DL 3S PR 9021)',
+      status: 'Approved',
+      pickup_time_estimated: 'Within 10 mins',
+      otp: '8294',
+    };
+
+    setNgoRequests((prev) => [newNgoReq, ...prev]);
+
     try {
-      await adminApi.publishSurplus({
+      const existing = JSON.parse(localStorage.getItem('messwise_greenroute_dispatches') || '[]');
+      localStorage.setItem('messwise_greenroute_dispatches', JSON.stringify([createdDispatch, ...existing]));
+      window.dispatchEvent(new CustomEvent('messwise-dispatch-updated', { detail: createdDispatch }));
+    } catch {}
+
+    let backendRes = null;
+    try {
+      backendRes = await adminApi.publishSurplus({
+        title: newSurplus.title,
         food_title: newSurplus.title,
-        meals_available: newSurplus.meals,
-        pickup_deadline: newSurplus.pickup_deadline,
+        meals: Number(newSurplus.meals) || 25,
+        meals_available: Number(newSurplus.meals) || 25,
+        location_detail: newSurplus.location_detail || 'Hostel A Central Mess, Dispatch Bay 2',
+        pickup_deadline: newSurplus.pickup_deadline || 'Today, 5:00 PM',
+        temp_celsius: 68,
         storage_temperature: 68.0,
       });
-      setPublishSuccess(true);
-      setTimeout(() => setPublishSuccess(false), 3000);
-    } catch {
-      setPublishSuccess(true);
-      setTimeout(() => setPublishSuccess(false), 3000);
+    } catch (err) {
+      console.warn('Publish surplus error:', err);
     }
+
+    const mealsCount = Number(newSurplus.meals) || 25;
+    const newSurplusLog = {
+      id: `prod-surplus-${Date.now()}`,
+      date: `Today (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+      menu: newSurplus.title,
+      p: mealsCount + 35,
+      s: 35,
+      sur: mealsCount,
+      w: Number((mealsCount * 0.04).toFixed(1)),
+      prepared: mealsCount + 35,
+      served: 35,
+      surplus: mealsCount,
+      waste: Number((mealsCount * 0.04).toFixed(1)),
+      status: 'Surplus Queue Active',
+      isSurplus: true,
+      surplusId: backendRes?.id || createdDispatch.surplusId,
+    };
+    setProductionLogs((prev) => {
+      const next = [newSurplusLog, ...prev];
+      try {
+        localStorage.setItem('messwise_production_logs', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.postMessage({
+          type: 'SURPLUS_PUBLISHED',
+          dish: {
+            id: backendRes?.id || createdDispatch.surplusId,
+            title: newSurplus.title,
+            meals: Number(newSurplus.meals) || 25,
+            hostel: createdDispatch.hostel,
+            location_detail: newSurplus.location_detail || 'Hostel A Central Mess, Dispatch Bay 2',
+            pickup_deadline: newSurplus.pickup_deadline || '5:00 PM',
+            status: 'Published',
+            temp_celsius: 68,
+            dietary: 'Vegetarian',
+            pickup_otp: backendRes?.pickup_otp || '8294'
+          }
+        });
+        bc.close();
+      }
+    } catch {}
+
+    setPublishSuccess(true);
+    setTimeout(() => {
+      setPublishSuccess(false);
+      setActiveTab('production');
+    }, 1200);
   };
 
   const handleVerifyOtpSubmit = async (requestId, otp) => {
@@ -189,6 +513,12 @@ function App() {
             <span className="badge badge-success">
               <CheckCircle2 size={13} /> Kitchen Online
             </span>
+            <button 
+              className={`btn ${activeTab === 'greenroute' ? 'btn-primary' : 'btn-secondary'} btn-sm`} 
+              onClick={() => setActiveTab('greenroute')}
+            >
+              <Bike size={14} /> GreenRoute Fleet
+            </button>
             <button className="btn btn-warm btn-sm" onClick={() => setActiveTab('surplus')}>
               <Sparkles size={14} /> Broadcast Surplus
             </button>
@@ -401,6 +731,27 @@ function App() {
               </div>
             </div>
 
+            {/* GreenRoute Quick-Commerce Dispatch & Rider Telemetry */}
+            <GreenRouteTracker 
+              ngoRequests={ngoRequests}
+              onHandoverSuccess={(disp) => {
+                setAdminStats((prev) => ({
+                  ...prev,
+                  today_stats: {
+                    ...prev.today_stats,
+                    surplus: Math.max(0, prev.today_stats.surplus - disp.portions),
+                  }
+                }));
+                setNgoRequests((prev) =>
+                  prev.map((r) =>
+                    (r.surplus_id === disp.surplusId || r.id === disp.id || r.otp === disp.otp)
+                      ? { ...r, status: 'Collected' }
+                      : r
+                  )
+                );
+              }}
+            />
+
             {/* Active NGO Handover Verification Queue */}
             <div className="panel">
               <div className="panel-header">
@@ -462,6 +813,31 @@ function App() {
           </div>
         )}
 
+        {/* Dedicated GreenRoute Quick-Commerce Fleet Tab */}
+        {activeTab === 'greenroute' && (
+          <div>
+            <GreenRouteTracker 
+              ngoRequests={ngoRequests}
+              onHandoverSuccess={(disp) => {
+                setAdminStats((prev) => ({
+                  ...prev,
+                  today_stats: {
+                    ...prev.today_stats,
+                    surplus: Math.max(0, prev.today_stats.surplus - disp.portions),
+                  }
+                }));
+                setNgoRequests((prev) =>
+                  prev.map((r) =>
+                    (r.surplus_id === disp.surplusId || r.id === disp.id || r.otp === disp.otp)
+                      ? { ...r, status: 'Collected' }
+                      : r
+                  )
+                );
+              }}
+            />
+          </div>
+        )}
+
         {/* Tab 2: Batch Production Details */}
         {activeTab === 'production' && (
           <div className="panel">
@@ -470,6 +846,9 @@ function App() {
                 <ChefHat size={16} />
                 <span>Kitchen Production History & Leftover Calibrations</span>
               </div>
+              <span className="badge badge-neutral">
+                {allProductionLogs.length} Records Active
+              </span>
             </div>
 
             <div className="table-container">
@@ -477,7 +856,7 @@ function App() {
                 <thead>
                   <tr>
                     <th>Date & Session</th>
-                    <th>Menu Prepared</th>
+                    <th>Menu / Dish Item</th>
                     <th className="text-right">Prepared</th>
                     <th className="text-right">Served</th>
                     <th className="text-right">Surplus</th>
@@ -486,22 +865,29 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { date: 'Today (Lunch)', menu: 'Rajma + Steamed Rice + Roti', p: prepQty, s: servQty, sur: leftover, w: wasteQty, status: 'Active Log' },
-                    { date: 'Today (Breakfast)', menu: 'Poha + Milk + Banana', p: 480, s: 472, sur: 8, w: 2.2, status: 'Completed' },
-                    { date: 'Yesterday (Dinner)', menu: 'Dal Tadka + Roti + Rice', p: 610, s: 598, sur: 12, w: 4.8, status: 'Completed' },
-                    { date: 'Yesterday (Lunch)', menu: 'Chole Bhature + Rice', p: 820, s: 795, sur: 25, w: 7.4, status: 'Completed' },
-                    { date: '14 Sep (Dinner)', menu: 'Veg Pulao + Kadhi', p: 580, s: 565, sur: 15, w: 3.9, status: 'Completed' },
-                  ].map((row, idx) => (
-                    <tr key={idx}>
+                  {allProductionLogs.map((row, idx) => (
+                    <tr key={row.id || idx}>
                       <td style={{ fontWeight: 600 }}>{row.date}</td>
-                      <td>{row.menu}</td>
-                      <td className="text-right">{row.p}</td>
-                      <td className="text-right">{row.s}</td>
-                      <td className="text-right" style={{ color: 'var(--accent-warm)', fontWeight: 600 }}>{row.sur}</td>
-                      <td className="text-right">{row.w}</td>
                       <td>
-                        <span className="badge badge-success">{row.status}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600 }}>{row.menu}</span>
+                          {row.isSurplus && (
+                            <span className="badge badge-warning" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                              Surplus Food Queue
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-right">{row.prepared ?? row.p}</td>
+                      <td className="text-right">{row.served ?? row.s}</td>
+                      <td className="text-right" style={{ color: 'var(--accent-warm)', fontWeight: 700 }}>
+                        {row.surplus ?? row.sur} Portions
+                      </td>
+                      <td className="text-right">{row.waste ?? row.w}</td>
+                      <td>
+                        <span className={`badge ${row.status === 'Completed' ? 'badge-success' : row.status === 'Surplus Queue Active' ? 'badge-warning' : 'badge-info'}`}>
+                          {row.status}
+                        </span>
                       </td>
                     </tr>
                   ))}

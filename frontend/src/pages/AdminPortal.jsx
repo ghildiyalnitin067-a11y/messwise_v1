@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ChefHat, 
   TrendingUp, 
@@ -13,10 +13,12 @@ import {
   PlusCircle,
   AlertCircle,
   CheckCircle2,
-  Clock
+  Clock,
+  Bike
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import HandoverModal from '../components/HandoverModal';
+import GreenRouteTracker from '../components/GreenRouteTracker';
 import { useMesswise } from '../context/MesswiseContext';
 import { adminApi } from '../api/client';
 
@@ -26,6 +28,8 @@ const AdminPortal = () => {
     aiPrediction, 
     surplusListings, 
     ngoRequests, 
+    productionLogs,
+    recordProductionLog,
     publishSurplus, 
     approveRequest, 
     confirmHandover,
@@ -100,25 +104,68 @@ const AdminPortal = () => {
     }
   };
 
+  const allProductionLogs = useMemo(() => {
+    const list = [...(productionLogs || [])];
+    const seenTitles = new Set(list.map((l) => (l.menu || '').toLowerCase().trim()));
+    (surplusListings || []).forEach((s) => {
+      const cleanTitle = (s.title || '').toLowerCase().trim();
+      if (cleanTitle && !seenTitles.has(cleanTitle)) {
+        seenTitles.add(cleanTitle);
+        const mealsCount = Number(s.meals) || 20;
+        list.unshift({
+          id: `surplus-log-${s.id}`,
+          date: 'Surplus Queue Active',
+          menu: s.title,
+          p: mealsCount + 30,
+          s: 30,
+          sur: mealsCount,
+          w: Number((mealsCount * 0.04).toFixed(1)),
+          prepared: mealsCount + 30,
+          served: 30,
+          surplus: mealsCount,
+          waste: Number((mealsCount * 0.04).toFixed(1)),
+          status: s.status === 'Requested' ? 'NGO Matched' : s.status === 'PickedUp' ? 'Collected' : 'Surplus Queue Active',
+          isSurplus: true,
+          surplusId: s.id,
+        });
+      }
+    });
+    return list;
+  }, [productionLogs, surplusListings]);
+
   const handleSaveProduction = async (e) => {
     e.preventDefault();
     try {
       await adminApi.logProduction({
         meal_session: 'Lunch',
-        prepared_qty: prepQty,
-        served_qty: servQty,
-        waste_qty: wasteQty,
+        prepared_qty: Number(prepQty),
+        served_qty: Number(servQty),
+        waste_qty: Number(wasteQty),
         notes: 'Daily batch production record',
       });
       setAdminStats((prev) => ({
         ...prev,
         today_stats: {
-          prepared: prepQty,
-          served: servQty,
+          prepared: Number(prepQty),
+          served: Number(servQty),
           surplus: leftover,
-          waste: wasteQty,
+          waste: Number(wasteQty),
         },
       }));
+      recordProductionLog({
+        date: `Today (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+        menu: 'Lunch Batch (Rajma + Steamed Rice + Roti)',
+        p: Number(prepQty),
+        s: Number(servQty),
+        sur: leftover,
+        w: Number(wasteQty),
+        prepared: Number(prepQty),
+        served: Number(servQty),
+        surplus: leftover,
+        waste: Number(wasteQty),
+        status: 'Completed',
+        isSurplus: false,
+      });
       setProdSuccess(true);
       setTimeout(() => setProdSuccess(false), 3000);
     } catch (e) {}
@@ -130,8 +177,8 @@ const AdminPortal = () => {
     setPublishSuccess(true);
     setTimeout(() => {
       setPublishSuccess(false);
-      setActiveTab('dashboard');
-    }, 1500);
+      setActiveTab('production');
+    }, 1200);
   };
 
   const handleVerifyOtpSubmit = async (requestId, otp) => {
@@ -162,6 +209,12 @@ const AdminPortal = () => {
             <span className="badge badge-success">
               <CheckCircle2 size={13} /> Kitchen Online
             </span>
+            <button 
+              className={`btn ${activeTab === 'greenroute' ? 'btn-primary' : 'btn-secondary'} btn-sm`} 
+              onClick={() => setActiveTab('greenroute')}
+            >
+              <Bike size={14} /> GreenRoute Fleet
+            </button>
             <button className="btn btn-warm btn-sm" onClick={() => setActiveTab('surplus')}>
               <Sparkles size={14} /> Broadcast Surplus
             </button>
@@ -355,6 +408,24 @@ const AdminPortal = () => {
               </div>
             </div>
 
+            {/* GreenRoute Quick-Commerce Dispatch & Rider Telemetry */}
+            <GreenRouteTracker 
+              ngoRequests={ngoRequests}
+              onHandoverSuccess={(disp) => {
+                setAdminStats((prev) => ({
+                  ...prev,
+                  today_stats: {
+                    ...prev.today_stats,
+                    surplus: Math.max(0, prev.today_stats.surplus - disp.portions),
+                  }
+                }));
+                const matchingReq = ngoRequests.find(r => r.surplus_id === disp.surplusId || r.id === disp.id || r.otp === disp.otp);
+                if (matchingReq && matchingReq.status !== 'Collected') {
+                  confirmHandover(matchingReq.id, disp.otp || matchingReq.otp).catch(() => {});
+                }
+              }}
+            />
+
             {/* Active NGO Handover Verification Queue */}
             <div className="panel">
               <div className="panel-header">
@@ -416,6 +487,28 @@ const AdminPortal = () => {
           </div>
         )}
 
+        {/* Dedicated GreenRoute Quick-Commerce Fleet Tab */}
+        {activeTab === 'greenroute' && (
+          <div>
+            <GreenRouteTracker 
+              ngoRequests={ngoRequests}
+              onHandoverSuccess={(disp) => {
+                setAdminStats((prev) => ({
+                  ...prev,
+                  today_stats: {
+                    ...prev.today_stats,
+                    surplus: Math.max(0, prev.today_stats.surplus - disp.portions),
+                  }
+                }));
+                const matchingReq = ngoRequests.find(r => r.surplus_id === disp.surplusId || r.id === disp.id || r.otp === disp.otp);
+                if (matchingReq && matchingReq.status !== 'Collected') {
+                  confirmHandover(matchingReq.id, disp.otp || matchingReq.otp).catch(() => {});
+                }
+              }}
+            />
+          </div>
+        )}
+
         {/* Tab 2: Batch Production Details */}
         {activeTab === 'production' && (
           <div className="panel">
@@ -424,6 +517,9 @@ const AdminPortal = () => {
                 <ChefHat size={16} />
                 <span>Kitchen Production History & Leftover Calibrations</span>
               </div>
+              <span className="badge badge-neutral">
+                {allProductionLogs.length} Records Active
+              </span>
             </div>
 
             <div className="table-container">
@@ -431,7 +527,7 @@ const AdminPortal = () => {
                 <thead>
                   <tr>
                     <th>Date & Session</th>
-                    <th>Menu Prepared</th>
+                    <th>Menu / Dish Item</th>
                     <th className="text-right">Prepared</th>
                     <th className="text-right">Served</th>
                     <th className="text-right">Surplus</th>
@@ -440,22 +536,29 @@ const AdminPortal = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { date: '16 Sep (Today, Lunch)', menu: 'Rajma + Steamed Rice + Roti', p: 842, s: 817, sur: 25, w: 6.0, status: 'Completed' },
-                    { date: '16 Sep (Today, Breakfast)', menu: 'Poha + Milk + Banana', p: 480, s: 472, sur: 8, w: 2.2, status: 'Completed' },
-                    { date: '15 Sep (Dinner)', menu: 'Dal Tadka + Roti + Rice', p: 610, s: 598, sur: 12, w: 4.8, status: 'Completed' },
-                    { date: '15 Sep (Lunch)', menu: 'Chole Bhature + Rice', p: 820, s: 795, sur: 25, w: 7.4, status: 'Completed' },
-                    { date: '14 Sep (Dinner)', menu: 'Veg Pulao + Kadhi', p: 580, s: 565, sur: 15, w: 3.9, status: 'Completed' },
-                  ].map((row, idx) => (
-                    <tr key={idx}>
+                  {allProductionLogs.map((row, idx) => (
+                    <tr key={row.id || idx}>
                       <td style={{ fontWeight: 600 }}>{row.date}</td>
-                      <td>{row.menu}</td>
-                      <td className="text-right">{row.p}</td>
-                      <td className="text-right">{row.s}</td>
-                      <td className="text-right" style={{ color: 'var(--accent-warm)', fontWeight: 600 }}>{row.sur}</td>
-                      <td className="text-right">{row.w}</td>
                       <td>
-                        <span className="badge badge-success">{row.status}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600 }}>{row.menu}</span>
+                          {row.isSurplus && (
+                            <span className="badge badge-warning" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                              Surplus Food Queue
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-right">{row.prepared ?? row.p}</td>
+                      <td className="text-right">{row.served ?? row.s}</td>
+                      <td className="text-right" style={{ color: 'var(--accent-warm)', fontWeight: 700 }}>
+                        {row.surplus ?? row.sur} Portions
+                      </td>
+                      <td className="text-right">{row.waste ?? row.w}</td>
+                      <td>
+                        <span className={`badge ${row.status === 'Completed' ? 'badge-success' : row.status === 'Surplus Queue Active' ? 'badge-warning' : 'badge-info'}`}>
+                          {row.status}
+                        </span>
                       </td>
                     </tr>
                   ))}

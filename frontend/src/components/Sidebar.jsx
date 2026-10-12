@@ -14,7 +14,8 @@ import {
   Sparkles,
   Layers,
   User,
-  History
+  History,
+  Bike
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
@@ -32,6 +33,7 @@ const Sidebar = ({ role = 'student', activeTab, onTabChange }) => {
 
   const adminMain = [
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
+    { id: 'greenroute', label: 'GreenRoute Dispatches', icon: Bike, badge: 'Live' },
     { id: 'production', label: 'Batch Production Logs', icon: ChefHat },
     { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp, badge: '94%' },
   ];
