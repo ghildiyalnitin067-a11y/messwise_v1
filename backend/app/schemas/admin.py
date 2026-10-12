@@ -109,3 +109,27 @@ class HandoverVerifyResponse(BaseModel):
     status: str
     meals_handed_over: int
     message: str
+
+
+class MenuUpdateRequest(BaseModel):
+    session: str # breakfast, lunch, snacks, dinner
+    menu: str
+    time_window: Optional[str] = None
+    deadline: Optional[str] = None
+    append_dish: bool = False
+
+
+class MenuSessionItem(BaseModel):
+    session: str
+    menu: str
+    time_window: str
+    deadline: str
+    rsvps_count: int = 0
+    addons: Optional[List[Dict[str, Any]]] = []
+
+
+class AdminMenuResponse(BaseModel):
+    date: str
+    hostel: str
+    sessions: Dict[str, MenuSessionItem]
+    message: Optional[str] = None

@@ -4,12 +4,14 @@ import {
   Utensils, 
   CalendarCheck, 
   Award, 
+  Trophy,
   LogOut,
-  ExternalLink
+  ExternalLink,
+  ThumbsUp
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
-const Sidebar = ({ activeTab, onTabChange }) => {
+const Sidebar = ({ activeTab, onTabChange, studentRank = 5 }) => {
   return (
     <aside className="portal-sidebar">
       <div className="sidebar-brand">
@@ -36,6 +38,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         </button>
 
         <button
+          className={`nav-item ${activeTab === 'preferences' ? 'active' : ''}`}
+          onClick={() => onTabChange('preferences')}
+        >
+          <div className="nav-label">
+            <ThumbsUp size={16} />
+            <span>Meal Preferences</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 800 }}>+15 Pts</span>
+        </button>
+
+        <button
           className={`nav-item ${activeTab === 'menu' ? 'active' : ''}`}
           onClick={() => onTabChange('menu')}
         >
@@ -55,7 +68,18 @@ const Sidebar = ({ activeTab, onTabChange }) => {
           </div>
         </button>
 
-        <div className="nav-section-title" style={{ marginTop: '0.5rem' }}>Performance</div>
+        <div className="nav-section-title" style={{ marginTop: '0.5rem' }}>Sustainability</div>
+
+        <button
+          className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`}
+          onClick={() => onTabChange('leaderboard')}
+        >
+          <div className="nav-label">
+            <Trophy size={16} />
+            <span>Eco Leaderboard</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#f59e0b', color: '#ffffff', fontWeight: 800 }}>#{studentRank}</span>
+        </button>
 
         <button
           className={`nav-item ${activeTab === 'impact' ? 'active' : ''}`}
@@ -65,30 +89,10 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <Award size={16} />
             <span>Eco Impact</span>
           </div>
-          <span className="nav-badge">#12 Rank</span>
         </button>
       </div>
 
       <div className="sidebar-footer">
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0 0.5rem' }}>
-          Switch Workspaces
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <a
-            href="http://localhost:3002"
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            Admin
-          </a>
-          <a
-            href="http://localhost:3003"
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            NGO
-          </a>
-        </div>
 
         <div className="user-mini-card">
           <div className="user-mini-info">

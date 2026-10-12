@@ -13,18 +13,32 @@ import {
   Clock, 
   Send,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Trophy,
+  ThumbsUp
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Sidebar from '../components/Sidebar';
 import TicketModal from '../components/TicketModal';
+import EcoLeaderboard from '../components/EcoLeaderboard';
+import StudentPreferenceManager from '../components/StudentPreferenceManager';
 import { useMesswise } from '../context/MesswiseContext';
 import { studentApi } from '../api/client';
 
 const StudentPortal = () => {
   const { currentUser, studentMeals, toggleMealBooking } = useMesswise();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedTicketMeal, setSelectedTicketMeal] = useState(null);
+  const todayDateStr = new Date().toISOString().slice(0, 10);
+  const [showPreferenceModal, setShowPreferenceModal] = useState(() => {
+    const votedDate = localStorage.getItem('messwise_pref_voted_date');
+    if (votedDate === todayDateStr) return false;
+    return sessionStorage.getItem('messwise_prompt_pref') === 'true' || !votedDate;
+  });
+
+  React.useEffect(() => {
+    if (sessionStorage.getItem('messwise_prompt_pref') === 'true') {
+      sessionStorage.removeItem('messwise_prompt_pref');
+    }
+  }, []);
   
   // Feedback state
   const [feedbackRating, setFeedbackRating] = useState(5);
@@ -85,9 +99,25 @@ const StudentPortal = () => {
             <span className="badge badge-success">
               <CheckCircle2 size={13} /> Active Boarder
             </span>
-            <span className="badge badge-neutral">
-              Rank #{currentUser.eco_rank} Campus Eco
-            </span>
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: '#fef3c7',
+                border: '1px solid #fcd34d',
+                color: '#92400e',
+                borderRadius: '999px',
+                padding: '0.3rem 0.75rem',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+              }}
+              title="Click to view full Eco Points Leaderboard"
+            >
+              <Trophy size={13} color="#d97706" /> Rank #{currentUser.eco_rank || 5} • {currentUser.eco_points || 580} Eco Pts
+            </button>
           </div>
         </header>
 
@@ -141,6 +171,58 @@ const StudentPortal = () => {
               </div>
             </div>
 
+            {/* Zero-Waste Student Preference Poll Callout */}
+            <div style={{
+              background: 'linear-gradient(135deg, #064e3b 0%, #047857 100%)',
+              borderRadius: '14px',
+              padding: '1.1rem 1.4rem',
+              color: '#ffffff',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.08)'
+            }}>
+              <div style={{ maxWidth: '640px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                    🗳️ DAILY ZERO-WASTE POLL
+                  </span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#a7f3d0' }}>
+                    Cut Kitchen Waste • Earn +15 Eco Pts
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.25rem' }}>
+                  Choose What You Want To Eat In Major Options
+                </div>
+                <div style={{ fontSize: '0.82rem', color: '#e2e8f0', lineHeight: 1.4 }}>
+                  Vote for your preferred dish choices. Categories receiving low preference (&lt;20%) are eliminated from kitchen prep to prevent excess food wastage!
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowPreferenceModal(true)}
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#064e3b',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.65rem 1.25rem',
+                  fontWeight: 700,
+                  fontSize: '0.86rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              >
+                <ThumbsUp size={15} /> Select Meal Preferences
+              </button>
+            </div>
+
             {/* Today's Meal RSVPs Section */}
             <div className="panel">
               <div className="panel-header">
@@ -155,110 +237,54 @@ const StudentPortal = () => {
 
               <div className="panel-body">
                 <div className="meal-rsvp-list">
-                  {/* Breakfast */}
-                  <div className={`meal-rsvp-item ${studentMeals.breakfast?.booked ? 'booked' : ''}`}>
-                    <div className="meal-rsvp-info">
-                      <div>
-                        <div className="meal-session-name">Breakfast</div>
-                        <div className="meal-time-tag">
-                          <Clock size={12} /> {studentMeals.breakfast?.time}
+                  {[
+                    { id: 'breakfast', name: 'Breakfast', icon: '🌅', defaultTime: '7:30 AM - 9:30 AM' },
+                    { id: 'lunch', name: 'Lunch', icon: '☀️', defaultTime: '12:30 PM - 2:30 PM' },
+                    { id: 'snacks', name: 'Evening Snacks', icon: '☕', defaultTime: '4:30 PM - 6:00 PM' },
+                    { id: 'dinner', name: 'Dinner', icon: '🌙', defaultTime: '7:30 PM - 9:30 PM' },
+                  ].map((sess) => {
+                    const meal = studentMeals[sess.id] || { session: sess.id, menu: 'Menu being prepared', time: sess.defaultTime, booked: false };
+                    const isBooked = Boolean(meal.booked);
+
+                    return (
+                      <div key={sess.id} className={`meal-rsvp-item ${isBooked ? 'booked' : ''}`}>
+                        <div className="meal-rsvp-info">
+                          <div>
+                            <div className="meal-session-name" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                              <span>{sess.icon}</span>
+                              <span>{sess.name}</span>
+                            </div>
+                            <div className="meal-time-tag">
+                              <Clock size={12} /> {meal.time || sess.defaultTime}
+                            </div>
+                          </div>
+                          <div className="meal-menu-text">
+                            <strong>Menu:</strong> {meal.menu || 'To be announced by mess supervisor'}
+                          </div>
+                        </div>
+
+                        <div className="meal-rsvp-actions">
+                          <span className={`badge ${isBooked ? 'badge-success' : 'badge-neutral'}`}>
+                            {isBooked ? 'Booked' : 'Not Booked'}
+                          </span>
+                          <button
+                            className={`btn btn-sm ${isBooked ? 'btn-secondary' : 'btn-primary'}`}
+                            onClick={() => handleToggle(sess.id)}
+                          >
+                            {isBooked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
+                          </button>
+                          {isBooked && (
+                            <button
+                              className="btn btn-sm btn-warm"
+                              onClick={() => setSelectedTicketMeal(sess.id)}
+                            >
+                              <QrCode size={13} /> Pass
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="meal-menu-text">
-                        <strong>Menu:</strong> {studentMeals.breakfast?.menu}
-                      </div>
-                    </div>
-
-                    <div className="meal-rsvp-actions">
-                      <span className={`badge ${studentMeals.breakfast?.booked ? 'badge-success' : 'badge-neutral'}`}>
-                        {studentMeals.breakfast?.booked ? 'Booked' : 'Not Booked'}
-                      </span>
-                      <button
-                        className={`btn btn-sm ${studentMeals.breakfast?.booked ? 'btn-secondary' : 'btn-primary'}`}
-                        onClick={() => handleToggle('breakfast')}
-                      >
-                        {studentMeals.breakfast?.booked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
-                      </button>
-                      {studentMeals.breakfast?.booked && (
-                        <button
-                          className="btn btn-sm btn-warm"
-                          onClick={() => setSelectedTicketMeal('breakfast')}
-                        >
-                          <QrCode size={13} /> Pass
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Lunch */}
-                  <div className={`meal-rsvp-item ${studentMeals.lunch?.booked ? 'booked' : ''}`}>
-                    <div className="meal-rsvp-info">
-                      <div>
-                        <div className="meal-session-name">Lunch</div>
-                        <div className="meal-time-tag">
-                          <Clock size={12} /> {studentMeals.lunch?.time}
-                        </div>
-                      </div>
-                      <div className="meal-menu-text">
-                        <strong>Menu:</strong> {studentMeals.lunch?.menu}
-                      </div>
-                    </div>
-
-                    <div className="meal-rsvp-actions">
-                      <span className={`badge ${studentMeals.lunch?.booked ? 'badge-success' : 'badge-neutral'}`}>
-                        {studentMeals.lunch?.booked ? 'Booked' : 'Not Booked'}
-                      </span>
-                      <button
-                        className={`btn btn-sm ${studentMeals.lunch?.booked ? 'btn-secondary' : 'btn-primary'}`}
-                        onClick={() => handleToggle('lunch')}
-                      >
-                        {studentMeals.lunch?.booked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
-                      </button>
-                      {studentMeals.lunch?.booked && (
-                        <button
-                          className="btn btn-sm btn-warm"
-                          onClick={() => setSelectedTicketMeal('lunch')}
-                        >
-                          <QrCode size={13} /> Pass
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Dinner */}
-                  <div className={`meal-rsvp-item ${studentMeals.dinner?.booked ? 'booked' : ''}`}>
-                    <div className="meal-rsvp-info">
-                      <div>
-                        <div className="meal-session-name">Dinner</div>
-                        <div className="meal-time-tag">
-                          <Clock size={12} /> {studentMeals.dinner?.time}
-                        </div>
-                      </div>
-                      <div className="meal-menu-text">
-                        <strong>Menu:</strong> {studentMeals.dinner?.menu}
-                      </div>
-                    </div>
-
-                    <div className="meal-rsvp-actions">
-                      <span className={`badge ${studentMeals.dinner?.booked ? 'badge-success' : 'badge-neutral'}`}>
-                        {studentMeals.dinner?.booked ? 'Booked' : 'Not Booked'}
-                      </span>
-                      <button
-                        className={`btn btn-sm ${studentMeals.dinner?.booked ? 'btn-secondary' : 'btn-primary'}`}
-                        onClick={() => handleToggle('dinner')}
-                      >
-                        {studentMeals.dinner?.booked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
-                      </button>
-                      {studentMeals.dinner?.booked && (
-                        <button
-                          className="btn btn-sm btn-warm"
-                          onClick={() => setSelectedTicketMeal('dinner')}
-                        >
-                          <QrCode size={13} /> Pass
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -356,29 +382,38 @@ const StudentPortal = () => {
               <table className="saas-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '140px' }}>Day</th>
-                    <th>Breakfast</th>
-                    <th>Lunch</th>
-                    <th>Dinner</th>
+                    <th style={{ width: '130px' }}>Day</th>
+                    <th>🌅 Breakfast</th>
+                    <th>☀️ Lunch</th>
+                    <th>☕ Snacks</th>
+                    <th>🌙 Dinner</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { day: 'Monday', b: 'Idli Sambhar + Chutney', l: 'Chole + Jeera Rice + Roti', d: 'Mix Dal + Sev Tamatar + Chapati' },
-                    { day: 'Tuesday (Today)', b: 'Poha + Milk + Banana', l: 'Rajma + Steamed Rice + Salad', d: 'Paneer Butter Masala + Roti', current: true },
-                    { day: 'Wednesday', b: 'Aloo Paratha + Curd', l: 'Kadhi Pakoda + Rice', d: 'Egg Curry / Paneer Bhurji + Roti' },
-                    { day: 'Thursday', b: 'Upma + Tea + Sprouts', l: 'Dal Makhani + Tandoori Roti', d: 'Veg Biryani + Cucumber Raita' },
-                    { day: 'Friday', b: 'Puri Bhaji + Halwa', l: 'Sambar Rice + Papad', d: 'Matar Paneer + Pulao' },
-                    { day: 'Saturday', b: 'Masala Dosa + Sambhar', l: 'Khichdi + Baingan Bharta', d: 'Dal Tadka + Jeera Rice' },
-                    { day: 'Sunday', b: 'Pav Bhaji + Fruit Juice', l: 'Special Dum Biryani Feast', d: 'Light Khichdi + Curd' },
+                    { day: 'Monday', b: 'Idli Sambhar + Chutney', l: 'Chole + Jeera Rice + Roti', s: 'Ginger Tea + Biscuits', d: 'Mix Dal + Sev Tamatar + Chapati' },
+                    { 
+                      day: 'Today (Live)', 
+                      b: studentMeals.breakfast?.menu || 'Poha + Milk + Banana', 
+                      l: studentMeals.lunch?.menu || 'Rajma + Steamed Rice + Salad', 
+                      s: studentMeals.snacks?.menu || 'Masala Chai + Veg Pakoda',
+                      d: studentMeals.dinner?.menu || 'Paneer Butter Masala + Roti', 
+                      current: true 
+                    },
+                    { day: 'Wednesday', b: 'Aloo Paratha + Curd', l: 'Kadhi Pakoda + Rice', s: 'Filter Coffee + Bun Maska', d: 'Egg Curry / Paneer Bhurji + Roti' },
+                    { day: 'Thursday', b: 'Upma + Tea + Sprouts', l: 'Dal Makhani + Tandoori Roti', s: 'Samosa + Green Chutney', d: 'Veg Biryani + Cucumber Raita' },
+                    { day: 'Friday', b: 'Puri Bhaji + Halwa', l: 'Sambar Rice + Papad', s: 'Corn Chaat + Lemonade', d: 'Matar Paneer + Pulao' },
+                    { day: 'Saturday', b: 'Masala Dosa + Sambhar', l: 'Khichdi + Baingan Bharta', s: 'Aloo Bonda + Kadak Chai', d: 'Dal Tadka + Jeera Rice' },
+                    { day: 'Sunday', b: 'Pav Bhaji + Fruit Juice', l: 'Special Dum Biryani Feast', s: 'Dhokla + Mint Chutney', d: 'Light Khichdi + Curd' },
                   ].map((row, idx) => (
                     <tr key={idx} style={row.current ? { backgroundColor: 'var(--brand-50)' } : {}}>
                       <td style={{ fontWeight: 600 }}>
                         {row.day}
-                        {row.current && <span className="badge badge-success" style={{ marginLeft: '0.4rem' }}>Today</span>}
+                        {row.current && <span className="badge badge-success" style={{ marginLeft: '0.4rem' }}>Live</span>}
                       </td>
                       <td>{row.b}</td>
                       <td>{row.l}</td>
+                      <td>{row.s}</td>
                       <td>{row.d}</td>
                     </tr>
                   ))}
@@ -488,14 +523,92 @@ const StudentPortal = () => {
                 </div>
               </div>
               <div className="panel-body">
-                <p style={{ lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                <p style={{ lineHeight: 1.6, color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
                   By confirming attendance or opting out at least 2 hours prior to kitchen preparation cycles, our mess staff can reduce safety buffer margins from 18% down to 2.6%. Surplus portions from students who opt out are systematically redirected to verified local food bank networks.
                 </p>
+
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    border: '1px solid #86efac',
+                    borderRadius: '14px',
+                    padding: '1.25rem 1.5rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800, color: '#166534' }}>
+                      <Trophy size={16} color="#15803d" />
+                      <span>You have earned {currentUser.eco_points || 580} Eco Points!</span>
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#14532d', marginTop: '0.2rem' }}>
+                      Ranked #{currentUser.eco_rank || 5} across campus hostel boarders.
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('leaderboard')}
+                    className="btn btn-primary btn-sm"
+                    style={{ background: '#15803d', borderColor: '#15803d', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <Trophy size={14} /> Open Eco Leaderboard →
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
+
+        {/* Tab 5: Eco Leaderboard */}
+        {activeTab === 'leaderboard' && (
+          <EcoLeaderboard
+            currentStudent={currentUser}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+
+        {/* Tab 6: Meal Preferences Poll */}
+        {activeTab === 'preferences' && (
+          <div>
+            <StudentPreferenceManager
+              onPreferenceSubmitted={() => {
+                localStorage.setItem('messwise_pref_voted_date', todayDateStr);
+              }}
+            />
+          </div>
+        )}
       </main>
+
+      {/* Zero-Waste Preference Onboarding / Daily Poll Modal */}
+      {showPreferenceModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1.25rem',
+        }}>
+          <div style={{ width: '100%', maxWidth: '860px', maxHeight: '90vh', overflowY: 'auto', borderRadius: '16px' }}>
+            <StudentPreferenceManager
+              isModal={true}
+              onClose={() => setShowPreferenceModal(false)}
+              onPreferenceSubmitted={() => {
+                localStorage.setItem('messwise_pref_voted_date', todayDateStr);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Pass Modal */}
       <TicketModal

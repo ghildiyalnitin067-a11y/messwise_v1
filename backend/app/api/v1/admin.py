@@ -19,7 +19,9 @@ from app.schemas.admin import (
     SurplusPublishRequest,
     SurplusPublishResponse,
     HandoverVerifyRequest,
-    HandoverVerifyResponse
+    HandoverVerifyResponse,
+    MenuUpdateRequest,
+    AdminMenuResponse
 )
 from app.schemas.ml import ForecastPredictRequest, ForecastPredictResponse
 
@@ -368,3 +370,17 @@ async def verify_greenroute_otp(
         "new_status": "handed_over"
     }
 
+@router.get("/menu", response_model=AdminMenuResponse)
+async def get_daily_menu(
+    db: AsyncSession = Depends(get_db)
+):
+    return await admin_service.get_daily_menu(db=db)
+
+
+@router.post("/menu", response_model=AdminMenuResponse)
+@router.post("/menu/push", response_model=AdminMenuResponse)
+async def update_daily_menu(
+    req: MenuUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    return await admin_service.update_daily_menu(db=db, req=req)

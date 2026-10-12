@@ -19,8 +19,18 @@ import {
 import Sidebar from '../components/Sidebar';
 import HandoverModal from '../components/HandoverModal';
 import GreenRouteTracker from '../components/GreenRouteTracker';
+  Droplets
+} from 'lucide-react';
+import Sidebar from '../components/Sidebar';
+import HandoverModal from '../components/HandoverModal';
+import EcoLeaderboard from '../components/EcoLeaderboard';
+import DailyMenuManager from '../components/DailyMenuManager';
+import UcoManagement from '../components/UcoManagement';
+import DemandForecastIntelligence from '../components/DemandForecastIntelligence';
+import AdminPreferenceManager from '../components/AdminPreferenceManager';
 import { useMesswise } from '../context/MesswiseContext';
 import { adminApi } from '../api/client';
+
 
 const AdminPortal = () => {
   const { 
@@ -267,6 +277,19 @@ const AdminPortal = () => {
                 </div>
                 <div className="kpi-icon">
                   <Trash2 size={18} />
+                </div>
+              </div>
+
+              <div className="kpi-card" onClick={() => setActiveTab('uco')} style={{ cursor: 'pointer', border: '1px solid #bbf7d0', background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)' }}>
+                <div>
+                  <div className="kpi-label" style={{ color: '#166534' }}>Used Cooking Oil</div>
+                  <div className="kpi-value" style={{ color: '#15803d' }}>Recycling Active</div>
+                  <div className="kpi-meta" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    Track collection &amp; CO₂e avoided <ArrowUpRight size={12} />
+                  </div>
+                </div>
+                <div className="kpi-icon" style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>
+                  <Droplets size={18} />
                 </div>
               </div>
             </div>
@@ -568,81 +591,9 @@ const AdminPortal = () => {
           </div>
         )}
 
-        {/* Tab 3: Demand Forecast Simulator */}
+        {/* Tab 3: Demand Forecast ML Intelligence Hub */}
         {activeTab === 'forecast' && (
-          <div className="panel">
-            <div className="panel-header">
-              <div className="panel-header-title">
-                <TrendingUp size={16} />
-                <span>Demand Forecast Scenario Simulator</span>
-              </div>
-            </div>
-
-            <div className="panel-body">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Day of Week</label>
-                  <select
-                    className="form-control"
-                    value={simDay}
-                    onChange={(e) => setSimDay(e.target.value)}
-                  >
-                    <option value="mon">Monday</option>
-                    <option value="tue">Tuesday</option>
-                    <option value="wed">Wednesday</option>
-                    <option value="thu">Thursday</option>
-                    <option value="fri">Friday</option>
-                    <option value="sat">Saturday</option>
-                    <option value="sun">Sunday</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Simulated RSVP Ratio ({simRatio}%)</label>
-                  <input
-                    type="range"
-                    min="50"
-                    max="100"
-                    value={simRatio}
-                    onChange={(e) => setSimRatio(Number(e.target.value))}
-                    style={{ width: '100%', marginTop: '0.5rem' }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Weather Signal</label>
-                  <select
-                    className="form-control"
-                    value={simWeather}
-                    onChange={(e) => setSimWeather(e.target.value)}
-                  >
-                    <option value="clear">Clear / Pleasant</option>
-                    <option value="rain">Rain / Storm (+4% turnout)</option>
-                    <option value="heat">High Heat (-3% turnout)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={handleSimulateForecast}
-                >
-                  <Sliders size={14} /> Run Model Forecast
-                </button>
-              </div>
-
-              <div style={{ padding: '1rem', background: 'var(--brand-50)', border: '1px solid var(--brand-100)', borderRadius: 'var(--radius-sm)' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--brand-900)', marginBottom: '0.25rem' }}>
-                  Simulated Output: Expected Attendance {aiPrediction.expected_demand} • Recommended Cooking {aiPrediction.recommended_cook} portions
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--brand-700)' }}>
-                  Targeting 0 student meal run-outs with minimal buffer waste.
-                </div>
-              </div>
-            </div>
-          </div>
+          <DemandForecastIntelligence />
         )}
 
         {/* Tab 4: Surplus Broadcast */}
@@ -777,6 +728,29 @@ const AdminPortal = () => {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Tab: Student Eco Leaderboard */}
+        {activeTab === 'leaderboard' && (
+          <EcoLeaderboard />
+        )}
+
+        {/* Tab: Student Dining Preferences & Menu Waste Optimization */}
+        {activeTab === 'preferences' && (
+          <AdminPreferenceManager />
+        )}
+
+        {/* Tab: Daily Menu Operations */}
+        {activeTab === 'menu' && (
+          <div>
+            <AdminPreferenceManager />
+            <DailyMenuManager />
+          </div>
+        )}
+
+        {/* Tab: Used Cooking Oil Management & Carbon Savings */}
+        {activeTab === 'uco' && (
+          <UcoManagement />
         )}
       </main>
 

@@ -199,55 +199,20 @@ const NgoLogin = ({ isOpen, onClose, onLoginSuccess }) => {
           }}
         >
           {/* Subtle Portal Selector */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '0.78rem', color: '#6B7280', fontWeight: 500, marginBottom: '0.4rem' }}>
-              Sign in as:
-            </div>
-            <div style={{
+          <div style={{ marginBottom: '1.25rem' }}>
+            <span style={{
               display: 'inline-flex',
-              backgroundColor: '#F3F4F6',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid #E5E8E3'
+              alignItems: 'center',
+              padding: '4px 12px',
+              borderRadius: '6px',
+              backgroundColor: '#fef3c7',
+              color: '#92400e',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              border: '1px solid #fde68a'
             }}>
-              <a 
-                href="http://localhost:3001"
-                style={{
-                  padding: '4px 14px',
-                  borderRadius: '6px',
-                  color: '#6B7280',
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                  textDecoration: 'none'
-                }}
-              >
-                Student
-              </a>
-              <a 
-                href="http://localhost:3002"
-                style={{
-                  padding: '4px 14px',
-                  borderRadius: '6px',
-                  color: '#6B7280',
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                  textDecoration: 'none'
-                }}
-              >
-                Admin
-              </a>
-              <span style={{
-                padding: '4px 14px',
-                borderRadius: '6px',
-                backgroundColor: '#FFFFFF',
-                color: '#123B2A',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-              }}>
-                NGO
-              </span>
-            </div>
+              NGO Food Rescue Portal
+            </span>
           </div>
 
           {/* Card Header */}

@@ -54,9 +54,14 @@ const LoginPage = () => {
       else if (role === 'ngo') credentials = ngoForm;
 
       await handleLogin(role, credentials);
-      if (role === 'student') navigate('/student');
-      else if (role === 'admin') navigate('/admin');
-      else if (role === 'ngo') navigate('/ngo');
+      if (role === 'student') {
+        sessionStorage.setItem('messwise_prompt_pref', 'true');
+        window.location.href = 'http://localhost:3001';
+      } else if (role === 'admin') {
+        window.location.href = 'http://localhost:3002';
+      } else if (role === 'ngo') {
+        window.location.href = 'http://localhost:3003';
+      }
     } catch (err) {
       const msg = err?.response?.data?.detail || err?.detail || err?.message || 'Authentication failed. Please verify your credentials.';
       setError(typeof msg === 'string' ? msg : 'Authentication failed.');

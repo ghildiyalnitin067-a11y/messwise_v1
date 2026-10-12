@@ -1,0 +1,23 @@
+{
+  "trained_at": "2026-10-12T10:21:59.307793Z",
+  "best_model": "xgboost",
+  "best_model_name": "XGBoost Regressor",
+  "val_mae": 15.5728,
+  "val_r2": 0.9521,
+  "mean_accuracy_pct": 96.81,
+  "latency_p95_ms": 0.6636,
+  "feature_cols": [
+    "day_of_week",
+    "is_weekend",
+    "meal_session",
+    "base_capacity",
+    "rsvp_count",
+    "optout_count",
+    "turnout_ratio",
+    "exam_season",
+    "holiday_factor",
+    "weather_code",
+    "prev_day_served",
+    "prev_waste_kg"
+  ]
+}

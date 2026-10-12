@@ -11,6 +11,7 @@ class MealItemOut(BaseModel):
     deadline: str
     can_modify: bool
     token: Optional[str] = None
+    addons: Optional[List[Dict[str, Any]]] = []
 
 
 class TodayMealsResponse(BaseModel):
@@ -72,5 +73,32 @@ class StudentImpactResponse(BaseModel):
     timely_cancellations: int
     estimated_surplus_avoided_kg: float
     co2_avoided_kg: float
+    eco_points: int = 580
     eco_rank: int
     sustainability_streak_days: int
+
+
+class StudentLeaderboardEntry(BaseModel):
+    rank: int
+    id: str
+    name: str
+    avatar: str
+    roll_no: str
+    hostel: str
+    room: Optional[str] = None
+    eco_points: int
+    meals_saved: int
+    co2_avoided_kg: float
+    streak_days: int
+    tier: str
+    badge: str
+    is_current_user: bool = False
+
+
+class StudentLeaderboardResponse(BaseModel):
+    current_student_rank: int
+    current_student_points: int
+    current_student_tier: str
+    points_to_next_rank: int
+    total_participants: int
+    leaderboard: List[StudentLeaderboardEntry]

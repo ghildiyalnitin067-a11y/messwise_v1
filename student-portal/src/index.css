@@ -700,6 +700,112 @@ a {
   gap: 0.65rem;
 }
 
+/* Sustainability Menu Add-On Banner */
+.sustainability-addon-card {
+  margin-top: 0.65rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.08);
+}
+
+.sustainability-addon-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.sustainability-addon-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.addon-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: #15803d;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.addon-eco-pts-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.sustainability-addon-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #14532d;
+  margin-top: 0.15rem;
+}
+
+.sustainability-addon-desc {
+  font-size: 0.76rem;
+  color: #166534;
+  line-height: 1.35;
+}
+
+.sustainability-addon-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+  color: #15803d;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.addon-claim-btn {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.addon-claim-btn:hover:not(:disabled) {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.addon-claim-btn.claimed {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  cursor: default;
+}
+
+
 /* ==========================================================================
    Modals
    ========================================================================== */

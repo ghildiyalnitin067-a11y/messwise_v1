@@ -28,9 +28,10 @@ export const MesswiseProvider = ({ children }) => {
   });
 
   const [studentMeals, setStudentMeals] = useState({
-    breakfast: { session: 'breakfast', menu: 'Poha + Milk + Banana', time: '7:00 AM - 9:00 AM', booked: true, status: 'Booked', token: 'BKF-892' },
-    lunch: { session: 'lunch', menu: 'Rajma + Jeera Rice + Roti + Salad', time: '12:00 PM - 2:00 PM', booked: true, status: 'Booked', token: 'LCH-419' },
-    dinner: { session: 'dinner', menu: 'Paneer Butter Masala + Roti + Dal', time: '7:00 PM - 9:00 PM', booked: false, status: 'Not Booked', token: null },
+    breakfast: { session: 'breakfast', menu: 'Poha + Milk + Banana', time: '7:30 AM - 9:30 AM', booked: true, status: 'Booked', token: 'BKF-892' },
+    lunch: { session: 'lunch', menu: 'Rajma + Jeera Rice + Roti + Salad', time: '12:30 PM - 2:30 PM', booked: true, status: 'Booked', token: 'LCH-419' },
+    snacks: { session: 'snacks', menu: 'Masala Chai + Veg Pakoda / Samosa', time: '4:30 PM - 6:00 PM', booked: false, status: 'Not Booked', token: null },
+    dinner: { session: 'dinner', menu: 'Paneer Butter Masala + Roti + Dal', time: '7:30 PM - 9:30 PM', booked: false, status: 'Not Booked', token: null },
   });
 
   const [adminStats, setAdminStats] = useState({
@@ -235,6 +236,39 @@ export const MesswiseProvider = ({ children }) => {
 
   useEffect(() => {
     refreshData();
+
+    let channel;
+    try {
+      channel = new BroadcastChannel('messwise_menu_sync');
+      channel.onmessage = (msg) => {
+        if (msg.data?.type === 'MENU_UPDATED') {
+          refreshData();
+        }
+      };
+    } catch {}
+
+    const handleStorage = (e) => {
+      if (e.key === 'messwise_menu_last_synced') {
+        refreshData();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    const handleFocus = () => {
+      refreshData();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    const interval = setInterval(() => {
+      refreshData();
+    }, 12000);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [refreshData]);
 
   // Actions
