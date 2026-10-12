@@ -21,22 +21,46 @@ services:
       - key: AUTO_SEED_DATA
         value: "true"
 
-  # Unified Frontend & Portal Hub
+  # Standalone Mess Admin Portal
   - type: web
-    name: messwise-portal
+    name: messwise-admin
     runtime: static
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
-    rootDir: frontend
+    rootDir: admin-portal
     envVars:
       - key: VITE_API_URL
         value: https://messwise-api.onrender.com/api/v1
-      - key: VITE_STUDENT_PORTAL_URL
-        value: https://messwise-student.vercel.app
-      - key: VITE_ADMIN_PORTAL_URL
-        value: https://messwise-admin.vercel.app
-      - key: VITE_NGO_PORTAL_URL
-        value: https://messwise-ngo.vercel.app
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Standalone Student Portal
+  - type: web
+    name: messwise-student
+    runtime: static
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    rootDir: student-portal
+    envVars:
+      - key: VITE_API_URL
+        value: https://messwise-api.onrender.com/api/v1
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Standalone NGO Food Rescue Portal
+  - type: web
+    name: messwise-ngo
+    runtime: static
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    rootDir: ngo-portal
+    envVars:
+      - key: VITE_API_URL
+        value: https://messwise-api.onrender.com/api/v1
     routes:
       - type: rewrite
         source: /*

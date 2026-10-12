@@ -1,4 +1,4 @@
-# Stage 1: Build the React Application
+# Stage 1: Build the Student Portal Application
 FROM node:20-alpine AS build
 
 WORKDIR /app

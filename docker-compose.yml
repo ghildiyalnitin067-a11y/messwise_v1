@@ -15,8 +15,9 @@ services:
       - SECRET_KEY=messwise-super-secure-production-key-2025
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=1440
-      - DATABASE_URL=sqlite:///./messwise.db
-      - CORS_ORIGINS=["http://localhost","http://localhost:80","http://localhost:5173","http://localhost:3001","http://localhost:3002","http://localhost:3003"]
+      - DATABASE_URL=sqlite+aiosqlite:///./messwise.db
+      - BACKEND_CORS_ORIGINS=["*"]
+      - AUTO_SEED_DATA=true
     volumes:
       - backend_data:/app/data
     healthcheck:
@@ -26,19 +27,44 @@ services:
       retries: 3
       start_period: 10s
 
-  frontend:
+  admin-portal:
     build:
-      context: ./frontend
+      context: ./admin-portal
       dockerfile: Dockerfile
-    container_name: messwise_frontend
+    container_name: messwise_admin_portal
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "5173:80"
+      - "3002:80"
     depends_on:
       - backend
     environment:
-      - VITE_API_URL=/api/v1
+      - VITE_API_URL=http://localhost:8000/api/v1
+
+  student-portal:
+    build:
+      context: ./student-portal
+      dockerfile: Dockerfile
+    container_name: messwise_student_portal
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+
+  ngo-portal:
+    build:
+      context: ./ngo-portal
+      dockerfile: Dockerfile
+    container_name: messwise_ngo_portal
+    restart: unless-stopped
+    ports:
+      - "3003:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
 
 volumes:
   backend_data:
