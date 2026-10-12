@@ -1,6 +1,6 @@
 import random
 from typing import Optional, List, Dict, Any
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
@@ -413,6 +413,16 @@ class AdminService:
 
     async def update_daily_menu(self, db: AsyncSession, req: MenuUpdateRequest, hostel_id: Optional[str] = None) -> AdminMenuResponse:
         today = date.today()
+        target_date = today
+
+        if req.day and req.day.lower() not in ["today", ""]:
+            weekday_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+            day_clean = req.day.strip().lower()
+            if day_clean in weekday_names:
+                target_idx = weekday_names.index(day_clean)
+                current_weekday = today.weekday()
+                target_date = today + timedelta(days=(target_idx - current_weekday))
+
         hostel_stmt = select(Hostel).limit(1)
         h_res = await db.execute(hostel_stmt)
         hostel = h_res.scalar_one_or_none()
@@ -420,7 +430,7 @@ class AdminService:
 
         sess_key = req.session.lower()
         stmt = select(MealSchedule).where(
-            MealSchedule.date == today,
+            MealSchedule.date == target_date,
             MealSchedule.session == sess_key
         )
         res = await db.execute(stmt)
@@ -442,9 +452,9 @@ class AdminService:
                 sched.time_window = req.time_window
         else:
             sched = MealSchedule(
-                id=f"sched-{sess_key}-{today.isoformat()}-{random.randint(100, 999)}",
+                id=f"sched-{sess_key}-{target_date.isoformat()}-{random.randint(100, 999)}",
                 hostel_id=hid,
-                date=today,
+                date=target_date,
                 session=sess_key,
                 menu=req.menu.strip(),
                 time_window=req.time_window or default_times.get(sess_key, "12:00 PM - 2:00 PM")

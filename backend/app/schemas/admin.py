@@ -114,6 +114,7 @@ class HandoverVerifyResponse(BaseModel):
 class MenuUpdateRequest(BaseModel):
     session: str # breakfast, lunch, snacks, dinner
     menu: str
+    day: Optional[str] = "today" # "today" or "Monday", "Tuesday", etc.
     time_window: Optional[str] = None
     deadline: Optional[str] = None
     append_dish: bool = False

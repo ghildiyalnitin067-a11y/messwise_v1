@@ -32,7 +32,7 @@ import DemandForecastIntelligence from './components/DemandForecastIntelligence'
 import AdminPreferenceManager from './components/AdminPreferenceManager';
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import GreenRouteTracker from './components/GreenRouteTracker';
-import { adminApi, authApi, stockApi } from './api/client';
+import { adminApi, authApi, stockApi, subscribeToPointsEarned } from './api/client';
 
 export const INITIAL_PRODUCTION_LOGS = [
   { id: 'log-1', date: 'Today (Lunch)', menu: 'Rajma Masala + Steamed Rice + Tawa Roti + Boondi Raita', p: 842, s: 817, sur: 25, w: 5.8, prepared: 842, served: 817, surplus: 25, waste: 5.8, status: 'Active Log', isSurplus: false },
@@ -81,6 +81,8 @@ function App() {
   const [publishingAddonId, setPublishingAddonId] = useState(null);
   const [broadcastedNgoIds, setBroadcastedNgoIds] = useState([]);
   const [lastDeductionAudit, setLastDeductionAudit] = useState(null);
+  const [campusEcoPoints, setCampusEcoPoints] = useState(4280);
+  const [liveEcoToast, setLiveEcoToast] = useState(null);
 
   const [adminStats, setAdminStats] = useState({
     mess_name: 'Hostel A - Aryabhatta Central Mess',
@@ -386,11 +388,24 @@ function App() {
     };
     window.addEventListener('storage', handleStorage);
 
+    const unsubPoints = subscribeToPointsEarned((data) => {
+      if (data && data.points_added > 0) {
+        setCampusEcoPoints((prev) => prev + data.points_added);
+        setLiveEcoToast({
+          studentName: data.student_name || 'Nitin Sharma',
+          points: data.points_added,
+          action: data.details || data.action || 'Sustainability Action',
+        });
+        setTimeout(() => setLiveEcoToast(null), 5000);
+      }
+    });
+
     return () => {
       clearInterval(pollInterval);
       if (bc) bc.close();
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('storage', handleStorage);
+      if (unsubPoints) unsubPoints();
     };
   }, []);
 
@@ -704,6 +719,26 @@ function App() {
               <Sparkles size={14} /> Broadcast Surplus
             </button>
 
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                color: '#065f46',
+                borderRadius: '999px',
+                padding: '0.3rem 0.75rem',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+              }}
+              title="View Student Eco Points Leaderboard"
+            >
+              <Trophy size={13} color="#059669" /> Campus Eco Pool: {campusEcoPoints} pts
+            </button>
+
             {isAuthenticated ? (
               <button
                 onClick={async () => {
@@ -724,6 +759,37 @@ function App() {
             )}
           </div>
         </header>
+
+        {liveEcoToast && (
+          <div style={{
+            background: 'linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%)',
+            border: '1px solid #6ee7b7',
+            borderRadius: '10px',
+            padding: '0.65rem 1rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.85rem',
+            color: '#065f46',
+            fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(16,185,129,0.15)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sparkles size={16} color="#059669" />
+              <span>
+                <strong>🌿 Live Eco Action (0ms Sync):</strong> {liveEcoToast.studentName} earned <strong>+{liveEcoToast.points} Eco Points</strong> ({liveEcoToast.action})!
+              </span>
+            </div>
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
+            >
+              View Leaderboard
+            </button>
+          </div>
+        )}
 
         {/* Tab 1: Operations Dashboard */}
         {activeTab === 'dashboard' && (

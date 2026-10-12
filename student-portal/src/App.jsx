@@ -23,7 +23,11 @@ import {
   Megaphone,
   AlertTriangle,
   CloudRain,
-  Calendar
+  Calendar,
+  Table,
+  LayoutGrid,
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Sidebar from './components/Sidebar';
@@ -31,10 +35,11 @@ import TicketModal from './components/TicketModal';
 import LoginModal from './components/LoginModal';
 import EcoLeaderboard from './components/EcoLeaderboard';
 import StudentPreferenceManager from './components/StudentPreferenceManager';
-import { studentApi, authApi } from './api/client';
+import { studentApi, authApi, subscribeToPointsEarned } from './api/client';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [rsvpViewMode, setRsvpViewMode] = useState('cards'); // 'cards' | 'table'
   const [selectedTicketMeal, setSelectedTicketMeal] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem('messwise_jwt_token')));
@@ -58,6 +63,11 @@ function App() {
     dinner: { session: 'dinner', menu: 'Paneer Butter Masala + Roti + Dal', time: '7:30 PM - 9:30 PM', booked: false, status: 'Not Booked', token: null },
   });
 
+  const [weeklySchedule, setWeeklySchedule] = useState(null);
+  const [liveMenuAlert, setLiveMenuAlert] = useState(null);
+  const [lastPushedSession, setLastPushedSession] = useState(null);
+  const [isRefreshingMenu, setIsRefreshingMenu] = useState(false);
+
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -66,48 +76,163 @@ function App() {
   // Sustainability Menu Add-On Opt-In State
   const [claimedAddons, setClaimedAddons] = useState({});
   const [addonToastMsg, setAddonToastMsg] = useState(null);
+  const [livePointsPulse, setLivePointsPulse] = useState(null);
 
-  const handleOptInAddon = async (addon) => {
+  const triggerPointsBurst = (pts, actionText) => {
+    setLivePointsPulse({ pts, action: actionText, id: Date.now() });
     try {
-      await studentApi.optInAddon(addon.addon_id, student.name);
-      setClaimedAddons((prev) => ({ ...prev, [addon.addon_id]: true }));
-      setStudent((prev) => ({
-        ...prev,
-        meals_saved: prev.meals_saved + 1,
-        eco_points: (prev.eco_points || 580) + (addon.eco_points || 25),
-        co2_avoided_kg: Number((prev.co2_avoided_kg + (addon.co2_saved_per_portion_kg || 0.084)).toFixed(1)),
-      }));
       confetti({
         particleCount: 45,
-        spread: 65,
-        origin: { y: 0.6 }
+        spread: 60,
+        origin: { y: 0.6 },
+        colors: ['#059669', '#10b981', '#34d399', '#f59e0b']
       });
-      setAddonToastMsg(`Zero-Waste Special Added! Rescued fresh produce. +${addon.eco_points || 25} Eco Points awarded to your profile!`);
-      setTimeout(() => setAddonToastMsg(null), 4500);
-    } catch {
-      setAddonToastMsg('Failed to add special.');
-      setTimeout(() => setAddonToastMsg(null), 3500);
-    }
+    } catch (_) {}
+    setTimeout(() => setLivePointsPulse(null), 3200);
+  };
+
+  const handleOptInAddon = (addon) => {
+    const pts = addon.eco_points || 25;
+    const co2 = Number((addon.co2_saved_per_portion_kg || 0.084).toFixed(3));
+    // 1. Instantaneous 0ms optimistic state update
+    setClaimedAddons((prev) => ({ ...prev, [addon.addon_id]: true }));
+    setStudent((prev) => ({
+      ...prev,
+      meals_saved: prev.meals_saved + 1,
+      eco_points: (prev.eco_points || 580) + pts,
+      co2_avoided_kg: Number((prev.co2_avoided_kg + co2).toFixed(1)),
+    }));
+    triggerPointsBurst(pts, 'Sustainability Add-On Claimed');
+    setAddonToastMsg(`Zero-Waste Special Added! Rescued fresh produce. +${pts} Eco Points awarded instantly!`);
+    setTimeout(() => setAddonToastMsg(null), 4000);
+
+    // 2. Non-blocking async background broadcast & DB persistence
+    studentApi.earnPoints(pts, 'sustainability_addon_opt_in', addon.name, 1, co2).catch(() => {});
+    studentApi.optInAddon(addon.addon_id, student.name).catch(() => {});
+  };
+
+  const fetchMealsAndMenu = async () => {
+    try {
+      const [resMeals, resWeekly] = await Promise.allSettled([
+        studentApi.getTodayMeals(),
+        studentApi.getWeeklyMenu()
+      ]);
+      if (resMeals.status === 'fulfilled' && resMeals.value?.meals) {
+        setStudentMeals(resMeals.value.meals);
+      }
+      if (resWeekly.status === 'fulfilled' && resWeekly.value?.schedule) {
+        setWeeklySchedule(resWeekly.value.schedule);
+      }
+    } catch (_) {}
   };
 
   useEffect(() => {
-    studentApi.getTodayMeals().then((res) => {
-      if (res?.meals) {
-        setStudentMeals(res.meals);
-      }
-    });
+    fetchMealsAndMenu();
     studentApi.getMe().then((u) => {
       if (u) {
         setStudent((prev) => ({ ...prev, ...u }));
       }
     });
+
+    // Real-time synchronization with Admin Menu Operations
+    let bcMenu, bcSurplus;
+    const handleBroadcastPayload = (data) => {
+      if (data?.type === 'MENU_PUSHED') {
+        const sess = data.session?.toLowerCase();
+        const dish = data.menu;
+        setLastPushedSession(sess);
+
+        setLiveMenuAlert(`🔔 Mess Supervisor updated the ${data.session} menu: Added "${dish}"! Live in Today's RSVP & Weekly Dining Schedule.`);
+        try {
+          confetti({
+            particleCount: 35,
+            spread: 60,
+            origin: { y: 0.3 },
+            colors: ['#059669', '#10b981', '#34d399']
+          });
+        } catch (_) {}
+
+        if (sess) {
+          setStudentMeals((prev) => {
+            const currentObj = prev[sess] || {};
+            const updatedMenuText = data.append_dish && currentObj.menu
+              ? `${currentObj.menu} + ${dish}`
+              : dish;
+            return {
+              ...prev,
+              [sess]: {
+                ...currentObj,
+                menu: updatedMenuText,
+                time: data.time_window || currentObj.time,
+              }
+            };
+          });
+        }
+
+        setTimeout(() => fetchMealsAndMenu(), 400);
+        setTimeout(() => setLiveMenuAlert(null), 7000);
+      }
+    };
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bcMenu = new BroadcastChannel('messwise-menu-channel');
+        bcMenu.onmessage = (event) => handleBroadcastPayload(event.data);
+
+        bcSurplus = new BroadcastChannel('messwise-surplus-channel');
+        bcSurplus.onmessage = (event) => handleBroadcastPayload(event.data);
+      }
+    } catch (_) {}
+
+    // Storage event for cross-origin / cross-tab updates
+    const handleStorageEvent = (e) => {
+      if (e.key === 'messwise_menu_update' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          handleBroadcastPayload(parsed);
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('storage', handleStorageEvent);
+
+    // Background poll every 3.5 seconds
+    const pollInterval = setInterval(() => {
+      fetchMealsAndMenu();
+    }, 3500);
+
+    return () => {
+      if (bcMenu) bcMenu.close();
+      if (bcSurplus) bcSurplus.close();
+      window.removeEventListener('storage', handleStorageEvent);
+      clearInterval(pollInterval);
+    };
   }, []);
 
+
+  useEffect(() => {
+    const unsub = subscribeToPointsEarned((payload) => {
+      if (payload && payload.points_added > 0 && payload.student_id === 'usr-student-01') {
+        setStudent((prev) => ({
+          ...prev,
+          eco_points: (prev.eco_points || 580) + payload.points_added,
+          meals_saved: prev.meals_saved + (payload.meals_saved_increment || 0),
+          co2_avoided_kg: Number((prev.co2_avoided_kg + (payload.co2_avoided_increment || 0)).toFixed(1)),
+        }));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const handleToggle = (session) => {
     const isNowBooking = !studentMeals[session]?.booked;
     const tokenStr = isNowBooking ? `TK-${session.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}` : null;
+    const ptsEarned = !isNowBooking ? 30 : 10;
+    const actionKey = !isNowBooking ? 'meal_skipped_alert' : 'meal_advance_rsvp';
+    const actionDesc = !isNowBooking ? `Skipped ${session} to prevent plate waste` : `Advance RSVP for ${session}`;
+    const mealsSavedInc = !isNowBooking ? 1 : 0;
+    const co2Inc = isNowBooking ? 0.3 : 0.5;
 
+    // 1. Instantaneous 0ms optimistic UI update
     setStudentMeals((prev) => ({
       ...prev,
       [session]: {
@@ -121,20 +246,15 @@ function App() {
     setStudent((prev) => ({
       ...prev,
       meals_booked: isNowBooking ? prev.meals_booked + 1 : Math.max(0, prev.meals_booked - 1),
-      meals_saved: !isNowBooking ? prev.meals_saved + 1 : prev.meals_saved,
-      eco_points: !isNowBooking ? (prev.eco_points || 580) + 30 : (prev.eco_points || 580) + 10,
-      co2_avoided_kg: isNowBooking ? Math.round((prev.co2_avoided_kg + 0.3) * 10) / 10 : Math.round((prev.co2_avoided_kg + 0.5) * 10) / 10,
+      meals_saved: prev.meals_saved + mealsSavedInc,
+      eco_points: (prev.eco_points || 580) + ptsEarned,
+      co2_avoided_kg: Math.round((prev.co2_avoided_kg + co2Inc) * 10) / 10,
     }));
 
-    if (isNowBooking) {
-      confetti({
-        particleCount: 40,
-        spread: 50,
-        origin: { y: 0.8 },
-        colors: ['#123B2A', '#EA580C', '#2F8563'],
-      });
-    }
+    triggerPointsBurst(ptsEarned, actionDesc);
 
+    // 2. Non-blocking async background broadcast & DB persistence
+    studentApi.earnPoints(ptsEarned, actionKey, actionDesc, mealsSavedInc, co2Inc).catch(() => {});
     studentApi.toggleBooking(session).catch(() => {});
   };
 
@@ -175,25 +295,49 @@ function App() {
             <span className="badge badge-success">
               <CheckCircle2 size={13} /> Active Boarder
             </span>
-            <button
-              onClick={() => setActiveTab('leaderboard')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                background: '#fef3c7',
-                border: '1px solid #fcd34d',
-                color: '#92400e',
-                borderRadius: '999px',
-                padding: '0.3rem 0.75rem',
-                fontWeight: 700,
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-              }}
-              title="Click to view full Eco Points Leaderboard"
-            >
-              <Trophy size={13} color="#d97706" /> Rank #{student.eco_rank || 5} • {student.eco_points || 580} Eco Pts
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setActiveTab('leaderboard')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: '#fef3c7',
+                  border: '1px solid #fcd34d',
+                  color: '#92400e',
+                  borderRadius: '999px',
+                  padding: '0.3rem 0.75rem',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  transform: livePointsPulse ? 'scale(1.06)' : 'scale(1)',
+                }}
+                title="Click to view full Eco Points Leaderboard"
+              >
+                <Trophy size={13} color="#d97706" /> Rank #{student.eco_rank || 5} • {student.eco_points || 580} Eco Pts
+              </button>
+              {livePointsPulse && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-18px',
+                    right: '-4px',
+                    background: '#059669',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    boxShadow: '0 4px 12px rgba(5,150,105,0.4)',
+                    whiteSpace: 'nowrap',
+                    zIndex: 20,
+                  }}
+                >
+                  +{livePointsPulse.pts} Eco Pts!
+                </div>
+              )}
+            </div>
 
             {isAuthenticated ? (
               <button
@@ -356,17 +500,114 @@ function App() {
 
             {/* Today's Meal RSVPs */}
             <div className="panel">
-              <div className="panel-header">
+              <div className="panel-header" style={{ flexWrap: 'wrap', gap: '0.65rem' }}>
                 <div className="panel-header-title">
                   <Utensils size={16} />
                   <span>Today's Meal RSVPs & Digital Passes</span>
+                  <span
+                    style={{
+                      background: '#dcfce7',
+                      color: '#15803d',
+                      border: '1px solid #86efac',
+                      borderRadius: '999px',
+                      padding: '0.15rem 0.55rem',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      marginLeft: '0.5rem',
+                    }}
+                  >
+                    ● Live Connected
+                  </span>
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Tue, 16 Sep 2025 • Cutoff: 2h before session
-                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+                  {/* View Mode Switcher */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      background: 'var(--bg-canvas-subtle)',
+                      padding: '2px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-subtle)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setRsvpViewMode('cards')}
+                      className={`btn btn-sm ${rsvpViewMode === 'cards' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ padding: '0.22rem 0.6rem', fontSize: '0.74rem', borderRadius: '6px' }}
+                    >
+                      <LayoutGrid size={12} /> Cards View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRsvpViewMode('table')}
+                      className={`btn btn-sm ${rsvpViewMode === 'table' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ padding: '0.22rem 0.6rem', fontSize: '0.74rem', borderRadius: '6px' }}
+                    >
+                      <Table size={12} /> Tabular View
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsRefreshingMenu(true);
+                      await fetchMealsAndMenu();
+                      setTimeout(() => setIsRefreshingMenu(false), 500);
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.22rem 0.55rem', fontSize: '0.74rem' }}
+                    title="Refresh live menu from server"
+                  >
+                    <RefreshCw size={12} className={isRefreshingMenu ? 'spin' : ''} /> Sync
+                  </button>
+                </div>
               </div>
 
               <div className="panel-body">
+                {/* Real-time Push Notification from Admin */}
+                {liveMenuAlert && (
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                      border: '1px solid #6ee7b7',
+                      color: '#065f46',
+                      padding: '0.75rem 1rem',
+                      borderRadius: 'var(--radius-sm)',
+                      marginBottom: '1rem',
+                      fontSize: '0.86rem',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 2px 4px rgba(5, 150, 105, 0.08)',
+                      animation: 'fadeIn 0.3s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Sparkles size={16} color="#059669" />
+                      <span>{liveMenuAlert}</span>
+                    </div>
+                    <button
+                      onClick={() => setLiveMenuAlert(null)}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        fontWeight: 800,
+                        color: '#065f46',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* Toast Notification */}
                 {addonToastMsg && (
                   <div style={{
@@ -386,110 +627,272 @@ function App() {
                   </div>
                 )}
 
-                <div className="meal-rsvp-list">
-                  {[
-                    { id: 'breakfast', name: 'Breakfast', iconComponent: <Sun size={15} className="text-amber-600" />, defaultTime: '7:30 AM - 9:30 AM' },
-                    { id: 'lunch', name: 'Lunch', iconComponent: <SunMedium size={15} className="text-amber-700" />, defaultTime: '12:30 PM - 2:30 PM' },
-                    { id: 'snacks', name: 'Evening Snacks', iconComponent: <Coffee size={15} className="text-stone-600" />, defaultTime: '4:30 PM - 6:00 PM' },
-                    { id: 'dinner', name: 'Dinner', iconComponent: <Moon size={15} className="text-indigo-600" />, defaultTime: '7:30 PM - 9:30 PM' },
-                  ].map((sess) => {
-                    const meal = studentMeals[sess.id] || { session: sess.id, menu: 'Menu being prepared', time: sess.defaultTime, booked: false };
-                    const isBooked = Boolean(meal.booked);
-
-                    return (
-                      <div key={sess.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div className={`meal-rsvp-item ${isBooked ? 'booked' : ''}`}>
-                          <div className="meal-rsvp-info">
-                            <div>
-                              <div className="meal-session-name" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                                <span>{sess.iconComponent}</span>
-                                <span>{sess.name}</span>
-                              </div>
-                              <div className="meal-time-tag">
-                                <Clock size={12} /> {meal.time || sess.defaultTime}
-                              </div>
-                            </div>
-                            <div className="meal-menu-text">
-                              <strong>Menu:</strong> {meal.menu || 'To be announced by mess supervisor'}
-                            </div>
-                          </div>
-
-                          <div className="meal-rsvp-actions">
-                            <span className={`badge ${isBooked ? 'badge-success' : 'badge-neutral'}`}>
-                              {isBooked ? 'Booked' : 'Not Booked'}
-                            </span>
-                            <button
-                              className={`btn btn-sm ${isBooked ? 'btn-secondary' : 'btn-primary'}`}
-                              onClick={() => handleToggle(sess.id)}
-                            >
-                              {isBooked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
-                            </button>
-                            {isBooked && (
-                              <button
-                                className="btn btn-sm btn-warm"
-                                onClick={() => setSelectedTicketMeal(sess.id)}
-                              >
-                                <QrCode size={13} /> Pass
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {meal.addons?.map((addon) => {
-                          const isClaimed = Boolean(claimedAddons[addon.addon_id]);
-                          const currentClaimed = (addon.portions_claimed || 0) + (isClaimed ? 1 : 0);
-                          const target = addon.portions_target || 250;
-                          const pct = Math.min(100, Math.round((currentClaimed / target) * 100));
+                {/* OPTION A: TABULAR FORM FOR TODAY'S RSVPS */}
+                {rsvpViewMode === 'table' ? (
+                  <div className="table-container" style={{ marginTop: '0.25rem', overflowX: 'auto' }}>
+                    <table className="saas-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '140px' }}>Session</th>
+                          <th style={{ width: '150px' }}>Serving Hours</th>
+                          <th style={{ width: '100px' }}>Cutoff</th>
+                          <th>Today's Live Menu Items (Live Sync)</th>
+                          <th style={{ width: '120px' }}>RSVP Status</th>
+                          <th style={{ width: '110px' }}>Pass Token</th>
+                          <th className="text-right" style={{ width: '165px' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { id: 'breakfast', name: 'Breakfast', iconComponent: <Sun size={14} className="text-amber-600" />, defaultTime: '7:30 AM - 9:30 AM', deadline: '6:30 AM' },
+                          { id: 'lunch', name: 'Lunch', iconComponent: <SunMedium size={14} className="text-amber-700" />, defaultTime: '12:30 PM - 2:30 PM', deadline: '10:30 AM' },
+                          { id: 'snacks', name: 'Snacks', iconComponent: <Coffee size={14} className="text-stone-600" />, defaultTime: '4:30 PM - 6:00 PM', deadline: '3:30 PM' },
+                          { id: 'dinner', name: 'Dinner', iconComponent: <Moon size={14} className="text-indigo-600" />, defaultTime: '7:30 PM - 9:30 PM', deadline: '5:30 PM' },
+                        ].map((sess) => {
+                          const meal = studentMeals[sess.id] || { session: sess.id, menu: 'Menu being prepared', time: sess.defaultTime, booked: false };
+                          const isBooked = Boolean(meal.booked);
+                          const isJustPushed = lastPushedSession === sess.id;
 
                           return (
-                            <div key={addon.addon_id} className="sustainability-addon-card">
-                              <div className="sustainability-addon-left">
-                                <div className="sustainability-addon-tag-row">
-                                  <span className="addon-badge-pill">
-                                    <Leaf size={11} /> Mess Kitchen Special
-                                  </span>
-                                  <span className="addon-eco-pts-pill">
-                                    +{addon.eco_points || 25} Eco Points
-                                  </span>
-                                  <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
-                                    Zero-Waste Initiative
-                                  </span>
+                            <tr
+                              key={sess.id}
+                              style={{
+                                backgroundColor: isJustPushed ? '#f0fdf4' : isBooked ? '#fafdfb' : 'transparent',
+                                transition: 'background-color 0.2s ease',
+                              }}
+                            >
+                              {/* Session Name */}
+                              <td style={{ verticalAlign: 'middle' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700 }}>
+                                  {sess.iconComponent}
+                                  <span>{sess.name}</span>
                                 </div>
+                                {isJustPushed && (
+                                  <span
+                                    style={{
+                                      display: 'inline-block',
+                                      marginTop: '0.2rem',
+                                      background: '#dcfce7',
+                                      color: '#15803d',
+                                      border: '1px solid #86efac',
+                                      fontSize: '0.68rem',
+                                      fontWeight: 800,
+                                      padding: '0.1rem 0.4rem',
+                                      borderRadius: '4px',
+                                    }}
+                                  >
+                                    ✨ Just Pushed
+                                  </span>
+                                )}
+                              </td>
 
-                                <div className="sustainability-addon-title">{addon.name}</div>
-                                <div className="sustainability-addon-desc">{addon.description}</div>
-
-                                <div className="sustainability-addon-meta">
-                                  <span>Claimed: {currentClaimed} / {target} ({pct}%)</span>
-                                  <span>•</span>
-                                  <span>Rescued: {Math.round((addon.waste_rescued_per_portion_kg || 0.06) * 1000)}g fresh produce / plate</span>
+                              {/* Serving Time */}
+                              <td style={{ verticalAlign: 'middle', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                  <Clock size={12} /> {meal.time || sess.defaultTime}
                                 </div>
-                              </div>
+                              </td>
 
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <button
-                                  className={`addon-claim-btn ${isClaimed ? 'claimed' : ''}`}
-                                  disabled={isClaimed}
-                                  onClick={() => handleOptInAddon(addon)}
-                                >
-                                  {isClaimed ? (
-                                    <>
-                                      <Check size={14} /> Added to Plate (+{addon.eco_points || 25} pts)
-                                    </>
-                                  ) : (
-                                    <>
-                                      <PlusCircle size={14} /> + Add to Plate (+{addon.eco_points || 25} pts)
-                                    </>
+                              {/* Cutoff */}
+                              <td style={{ verticalAlign: 'middle', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                {meal.deadline || sess.deadline}
+                              </td>
+
+                              {/* Live Menu Items */}
+                              <td style={{ verticalAlign: 'middle' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                                  {meal.menu || 'Menu being finalized by mess kitchen'}
+                                </div>
+                                {meal.addons && meal.addons.length > 0 && (
+                                  <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                    {meal.addons.map((a) => (
+                                      <span
+                                        key={a.addon_id}
+                                        style={{
+                                          background: '#f0fdf4',
+                                          border: '1px solid #86efac',
+                                          color: '#15803d',
+                                          fontSize: '0.7rem',
+                                          padding: '0.15rem 0.45rem',
+                                          borderRadius: '999px',
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.25rem',
+                                        }}
+                                      >
+                                        <Leaf size={10} /> Special: {a.name} (+{a.eco_points} pts)
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* RSVP Status */}
+                              <td style={{ verticalAlign: 'middle' }}>
+                                <span className={`badge ${isBooked ? 'badge-success' : 'badge-neutral'}`}>
+                                  {isBooked ? 'Booked' : 'Not Booked'}
+                                </span>
+                              </td>
+
+                              {/* Digital Token */}
+                              <td style={{ verticalAlign: 'middle', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 600 }}>
+                                {isBooked ? (meal.token || 'TK-ACTIVE') : '—'}
+                              </td>
+
+                              {/* Action Buttons */}
+                              <td className="text-right" style={{ verticalAlign: 'middle' }}>
+                                <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
+                                  <button
+                                    className={`btn btn-sm ${isBooked ? 'btn-secondary' : 'btn-primary'}`}
+                                    onClick={() => handleToggle(sess.id)}
+                                    style={{ fontSize: '0.78rem' }}
+                                  >
+                                    {isBooked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
+                                  </button>
+                                  {isBooked && (
+                                    <button
+                                      className="btn btn-sm btn-warm"
+                                      onClick={() => setSelectedTicketMeal(sess.id)}
+                                      style={{ fontSize: '0.78rem' }}
+                                    >
+                                      <QrCode size={12} /> Pass
+                                    </button>
                                   )}
-                                </button>
-                              </div>
-                            </div>
+                                </div>
+                              </td>
+                            </tr>
                           );
                         })}
-                      </div>
-                    );
-                  })}
-                </div>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* OPTION B: CARDS VIEW FOR TODAY'S RSVPS */
+                  <div className="meal-rsvp-list">
+                    {[
+                      { id: 'breakfast', name: 'Breakfast', iconComponent: <Sun size={15} className="text-amber-600" />, defaultTime: '7:30 AM - 9:30 AM' },
+                      { id: 'lunch', name: 'Lunch', iconComponent: <SunMedium size={15} className="text-amber-700" />, defaultTime: '12:30 PM - 2:30 PM' },
+                      { id: 'snacks', name: 'Evening Snacks', iconComponent: <Coffee size={15} className="text-stone-600" />, defaultTime: '4:30 PM - 6:00 PM' },
+                      { id: 'dinner', name: 'Dinner', iconComponent: <Moon size={15} className="text-indigo-600" />, defaultTime: '7:30 PM - 9:30 PM' },
+                    ].map((sess) => {
+                      const meal = studentMeals[sess.id] || { session: sess.id, menu: 'Menu being prepared', time: sess.defaultTime, booked: false };
+                      const isBooked = Boolean(meal.booked);
+                      const isJustPushed = lastPushedSession === sess.id;
+
+                      return (
+                        <div key={sess.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div
+                            className={`meal-rsvp-item ${isBooked ? 'booked' : ''}`}
+                            style={isJustPushed ? { borderLeft: '4px solid #16a34a', backgroundColor: '#f0fdf4' } : {}}
+                          >
+                            <div className="meal-rsvp-info">
+                              <div>
+                                <div className="meal-session-name" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                  <span>{sess.iconComponent}</span>
+                                  <span>{sess.name}</span>
+                                  {isJustPushed && (
+                                    <span
+                                      style={{
+                                        background: '#dcfce7',
+                                        color: '#15803d',
+                                        fontSize: '0.68rem',
+                                        fontWeight: 800,
+                                        padding: '0.1rem 0.4rem',
+                                        borderRadius: '4px',
+                                        border: '1px solid #86efac',
+                                      }}
+                                    >
+                                      ✨ Live Added
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="meal-time-tag">
+                                  <Clock size={12} /> {meal.time || sess.defaultTime}
+                                </div>
+                              </div>
+                              <div className="meal-menu-text">
+                                <strong>Menu:</strong> {meal.menu || 'To be announced by mess supervisor'}
+                              </div>
+                            </div>
+
+                            <div className="meal-rsvp-actions">
+                              <span className={`badge ${isBooked ? 'badge-success' : 'badge-neutral'}`}>
+                                {isBooked ? 'Booked' : 'Not Booked'}
+                              </span>
+                              <button
+                                className={`btn btn-sm ${isBooked ? 'btn-secondary' : 'btn-primary'}`}
+                                onClick={() => handleToggle(sess.id)}
+                              >
+                                {isBooked ? 'Cancel RSVP' : 'RSVP (Opt-In)'}
+                              </button>
+                              {isBooked && (
+                                <button
+                                  className="btn btn-sm btn-warm"
+                                  onClick={() => setSelectedTicketMeal(sess.id)}
+                                >
+                                  <QrCode size={13} /> Pass
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {meal.addons?.map((addon) => {
+                            const isClaimed = Boolean(claimedAddons[addon.addon_id]);
+                            const currentClaimed = (addon.portions_claimed || 0) + (isClaimed ? 1 : 0);
+                            const target = addon.portions_target || 250;
+                            const pct = Math.min(100, Math.round((currentClaimed / target) * 100));
+
+                            return (
+                              <div key={addon.addon_id} className="sustainability-addon-card">
+                                <div className="sustainability-addon-left">
+                                  <div className="sustainability-addon-tag-row">
+                                    <span className="addon-badge-pill">
+                                      <Leaf size={11} /> Mess Kitchen Special
+                                    </span>
+                                    <span className="addon-eco-pts-pill">
+                                      +{addon.eco_points || 25} Eco Points
+                                    </span>
+                                    <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
+                                      Zero-Waste Initiative
+                                    </span>
+                                  </div>
+
+                                  <div className="sustainability-addon-title">{addon.name}</div>
+                                  <div className="sustainability-addon-desc">{addon.description}</div>
+
+                                  <div className="sustainability-addon-meta">
+                                    <span>Claimed: {currentClaimed} / {target} ({pct}%)</span>
+                                    <span>•</span>
+                                    <span>Rescued: {Math.round((addon.waste_rescued_per_portion_kg || 0.06) * 1000)}g fresh produce / plate</span>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <button
+                                    className={`addon-claim-btn ${isClaimed ? 'claimed' : ''}`}
+                                    disabled={isClaimed}
+                                    onClick={() => handleOptInAddon(addon)}
+                                  >
+                                    {isClaimed ? (
+                                      <>
+                                        <Check size={14} /> Added to Plate (+{addon.eco_points || 25} pts)
+                                      </>
+                                    ) : (
+                                      <>
+                                        <PlusCircle size={14} /> + Add to Plate (+{addon.eco_points || 25} pts)
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -624,10 +1027,10 @@ function App() {
         {activeTab === 'preferences' && (
           <StudentPreferenceManager
             onPointsEarned={(pts) => {
-              setStudent((prev) => ({ ...prev, eco_points: (prev.eco_points || 0) + pts }));
-              try {
-                confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
-              } catch (_) {}
+              const ptsAwarded = pts || 15;
+              setStudent((prev) => ({ ...prev, eco_points: (prev.eco_points || 580) + ptsAwarded }));
+              triggerPointsBurst(ptsAwarded, 'Preference Poll Completed');
+              studentApi.earnPoints(ptsAwarded, 'preference_poll_vote', 'Student Menu Choice Poll', 0, 0.1).catch(() => {});
             }}
           />
         )}
@@ -635,57 +1038,233 @@ function App() {
         {/* Tab 2: Menu */}
         {activeTab === 'menu' && (
           <div className="panel">
-            <div className="panel-header">
+            <div className="panel-header" style={{ flexWrap: 'wrap', gap: '0.65rem' }}>
               <div className="panel-header-title">
                 <Utensils size={16} />
-                <span>Hostel A Weekly Dining Schedule</span>
+                <span>Hostel A Weekly Dining Schedule (Tabular Form)</span>
+                <span
+                  style={{
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    border: '1px solid #86efac',
+                    borderRadius: '999px',
+                    padding: '0.15rem 0.55rem',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    marginLeft: '0.5rem',
+                  }}
+                >
+                  ● Live Synced with Admin Operations
+                </span>
               </div>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Managed by Chef Rajesh Kumar
-              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('dashboard')}
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <CalendarCheck size={13} /> View Today's RSVPs
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsRefreshingMenu(true);
+                    await fetchMealsAndMenu();
+                    setTimeout(() => setIsRefreshingMenu(false), 500);
+                  }}
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  title="Reload schedule from server"
+                >
+                  <RefreshCw size={13} className={isRefreshingMenu ? 'spin' : ''} /> Refresh Schedule
+                </button>
+              </div>
             </div>
 
-            <div className="table-container">
+            {liveMenuAlert && (
+              <div
+                style={{
+                  margin: '1rem 1.25rem 0 1.25rem',
+                  background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                  border: '1px solid #6ee7b7',
+                  color: '#065f46',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.86rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 2px 4px rgba(5, 150, 105, 0.08)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles size={16} color="#059669" />
+                  <span>{liveMenuAlert}</span>
+                </div>
+                <button
+                  onClick={() => setLiveMenuAlert(null)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    color: '#065f46',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            <div className="table-container" style={{ marginTop: '0.5rem' }}>
               <table className="saas-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '130px' }}>Day</th>
-                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Sun size={13} className="text-amber-600" /> Breakfast</span></th>
-                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><SunMedium size={13} className="text-amber-700" /> Lunch</span></th>
-                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Coffee size={13} className="text-stone-600" /> Snacks</span></th>
-                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Moon size={13} className="text-indigo-600" /> Dinner</span></th>
+                    <th style={{ width: '135px' }}>Day / Date</th>
+                    <th>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Sun size={13} className="text-amber-600" /> Breakfast (7:00-9:00 AM)
+                      </span>
+                    </th>
+                    <th>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <SunMedium size={13} className="text-amber-700" /> Lunch (12:00-2:00 PM)
+                      </span>
+                    </th>
+                    <th>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Coffee size={13} className="text-stone-600" /> Snacks (4:30-6:00 PM)
+                      </span>
+                    </th>
+                    <th>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Moon size={13} className="text-indigo-600" /> Dinner (7:30-9:30 PM)
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { day: 'Monday', b: 'Idli Sambhar + Chutney', l: 'Chole + Jeera Rice + Roti', s: 'Ginger Tea + Biscuits', d: 'Mix Dal + Sev Tamatar + Chapati' },
-                    { 
-                      day: 'Today (Live)', 
-                      b: studentMeals.breakfast?.menu || 'Poha + Milk + Banana', 
-                      l: studentMeals.lunch?.menu || 'Rajma + Steamed Rice + Salad', 
-                      s: studentMeals.snacks?.menu || 'Masala Chai + Veg Pakoda',
-                      d: studentMeals.dinner?.menu || 'Paneer Butter Masala + Roti', 
-                      current: true 
-                    },
-                    { day: 'Wednesday', b: 'Aloo Paratha + Curd', l: 'Kadhi Pakoda + Rice', s: 'Filter Coffee + Bun Maska', d: 'Egg Curry / Paneer Bhurji + Roti' },
-                    { day: 'Thursday', b: 'Upma + Tea + Sprouts', l: 'Dal Makhani + Tandoori Roti', s: 'Samosa + Green Chutney', d: 'Veg Biryani + Cucumber Raita' },
-                    { day: 'Friday', b: 'Puri Bhaji + Halwa', l: 'Sambar Rice + Papad', s: 'Corn Chaat + Lemonade', d: 'Matar Paneer + Pulao' },
-                    { day: 'Saturday', b: 'Masala Dosa + Sambhar', l: 'Khichdi + Baingan Bharta', s: 'Aloo Bonda + Kadak Chai', d: 'Dal Tadka + Jeera Rice' },
-                    { day: 'Sunday', b: 'Pav Bhaji + Fruit Juice', l: 'Special Dum Biryani Feast', s: 'Dhokla + Mint Chutney', d: 'Light Khichdi + Curd' },
-                  ].map((row, idx) => (
-                    <tr key={idx} style={row.current ? { backgroundColor: 'var(--brand-50)' } : {}}>
-                      <td style={{ fontWeight: 600 }}>
-                        {row.day}
-                        {row.current && <span className="badge badge-success" style={{ marginLeft: '0.4rem' }}>Live</span>}
-                      </td>
-                      <td>{row.b}</td>
-                      <td>{row.l}</td>
-                      <td>{row.s}</td>
-                      <td>{row.d}</td>
-                    </tr>
-                  ))}
+                  {(weeklySchedule || [
+                    { day: 'Monday', date: 'Mon', is_today: false, breakfast: 'Idli Sambhar + Chutney', lunch: 'Chole + Jeera Rice + Roti', snacks: 'Ginger Tea + Biscuits', dinner: 'Mix Dal + Sev Tamatar + Chapati' },
+                    { day: 'Tuesday', date: 'Today (Live)', is_today: true, breakfast: studentMeals.breakfast?.menu || 'Poha + Milk + Banana', lunch: studentMeals.lunch?.menu || 'Rajma + Steamed Rice + Salad', snacks: studentMeals.snacks?.menu || 'Masala Chai + Veg Pakoda', dinner: studentMeals.dinner?.menu || 'Paneer Butter Masala + Roti' },
+                    { day: 'Wednesday', date: 'Wed', is_today: false, breakfast: 'Aloo Paratha + Curd', lunch: 'Kadhi Pakoda + Rice', snacks: 'Filter Coffee + Bun Maska', dinner: 'Egg Curry / Paneer Bhurji + Roti' },
+                    { day: 'Thursday', date: 'Thu', is_today: false, breakfast: 'Upma + Tea + Sprouts', lunch: 'Dal Makhani + Tandoori Roti', snacks: 'Samosa + Green Chutney', dinner: 'Veg Biryani + Cucumber Raita' },
+                    { day: 'Friday', date: 'Fri', is_today: false, breakfast: 'Puri Bhaji + Halwa', lunch: 'Sambar Rice + Papad', snacks: 'Corn Chaat + Lemonade', dinner: 'Matar Paneer + Pulao' },
+                    { day: 'Saturday', date: 'Sat', is_today: false, breakfast: 'Masala Dosa + Sambhar', lunch: 'Khichdi + Baingan Bharta', snacks: 'Aloo Bonda + Kadak Chai', dinner: 'Dal Tadka + Jeera Rice' },
+                    { day: 'Sunday', date: 'Sun', is_today: false, breakfast: 'Pav Bhaji + Fruit Juice', lunch: 'Special Dum Biryani Feast', snacks: 'Dhokla + Mint Chutney', dinner: 'Light Khichdi + Curd' },
+                  ]).map((row, idx) => {
+                    const isToday = Boolean(row.is_today || row.current || row.day === 'Tuesday');
+                    
+                    // Live menus for today always reflect real-time studentMeals pushed by admin
+                    const bMenu = isToday ? (studentMeals.breakfast?.menu || row.breakfast) : row.breakfast;
+                    const lMenu = isToday ? (studentMeals.lunch?.menu || row.lunch) : row.lunch;
+                    const sMenu = isToday ? (studentMeals.snacks?.menu || row.snacks) : row.snacks;
+                    const dMenu = isToday ? (studentMeals.dinner?.menu || row.dinner) : row.dinner;
+
+                    return (
+                      <tr
+                        key={idx}
+                        style={isToday ? { backgroundColor: 'var(--brand-50)', borderLeft: '3px solid var(--brand-700)' } : {}}
+                      >
+                        <td style={{ fontWeight: 700, verticalAlign: 'top' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            <span style={{ color: isToday ? 'var(--brand-800)' : 'var(--text-primary)' }}>{row.day}</span>
+                            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{row.date}</span>
+                            {isToday && (
+                              <span
+                                className="badge badge-success"
+                                style={{ alignSelf: 'flex-start', fontSize: '0.68rem', padding: '0.1rem 0.45rem' }}
+                              >
+                                ● Live Today
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Breakfast */}
+                        <td style={{ verticalAlign: 'top' }}>
+                          <div style={{ lineHeight: 1.45 }}>{bMenu}</div>
+                          {isToday && lastPushedSession === 'breakfast' && (
+                            <span style={{ display: 'inline-block', marginTop: '0.25rem', fontSize: '0.68rem', color: '#15803d', background: '#dcfce7', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
+                              ✨ Just Pushed
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Lunch */}
+                        <td style={{ verticalAlign: 'top' }}>
+                          <div style={{ lineHeight: 1.45 }}>{lMenu}</div>
+                          {isToday && lastPushedSession === 'lunch' && (
+                            <span style={{ display: 'inline-block', marginTop: '0.25rem', fontSize: '0.68rem', color: '#15803d', background: '#dcfce7', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
+                              ✨ Just Pushed
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Snacks */}
+                        <td style={{ verticalAlign: 'top' }}>
+                          <div style={{ lineHeight: 1.45 }}>{sMenu}</div>
+                          {isToday && lastPushedSession === 'snacks' && (
+                            <span style={{ display: 'inline-block', marginTop: '0.25rem', fontSize: '0.68rem', color: '#15803d', background: '#dcfce7', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
+                              ✨ Just Pushed
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Dinner */}
+                        <td style={{ verticalAlign: 'top' }}>
+                          <div style={{ lineHeight: 1.45 }}>{dMenu}</div>
+                          {isToday && lastPushedSession === 'dinner' && (
+                            <span style={{ display: 'inline-block', marginTop: '0.25rem', fontSize: '0.68rem', color: '#15803d', background: '#dcfce7', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
+                              ✨ Just Pushed
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Quick Helper Banner */}
+            <div
+              style={{
+                marginTop: '1rem',
+                padding: '0.85rem 1.25rem',
+                background: 'var(--bg-canvas-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                fontSize: '0.82rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Zap size={15} color="#ea580c" />
+                <span>
+                  <strong>Real-time Food Sync:</strong> Any dish pushed by mess administration is updated instantaneously in both Today's RSVP pass counter and this weekly dining schedule.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className="btn btn-sm btn-primary"
+                style={{ fontSize: '0.78rem' }}
+              >
+                Manage My RSVPs & Passes
+              </button>
             </div>
           </div>
         )}

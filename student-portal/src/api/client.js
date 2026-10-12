@@ -103,6 +103,15 @@ export const studentApi = {
       return MOCK_MEALS;
     }
   },
+  getWeeklyMenu: async () => {
+    try {
+      const res = await api.get('/student/menu/weekly');
+      if (res?.data?.schedule) return res.data;
+      return null;
+    } catch {
+      return null;
+    }
+  },
   toggleBooking: async (mealSession) => {
     try {
       const res = await api.post('/student/meals/toggle', { meal_session: mealSession });
@@ -150,6 +159,39 @@ export const studentApi = {
       };
     }
   },
+  earnPoints: async (points, action = 'eco_action', details = 'Sustainability Action', mealsSavedInc = 0, co2Inc = 0) => {
+    // 1. Instantaneous 0ms client-side broadcast across tabs, windows, and ports
+    broadcastPointsEarned({
+      student_id: 'usr-student-01',
+      student_name: 'Nitin Sharma',
+      points_added: points,
+      action: action,
+      details: details,
+      meals_saved_increment: mealsSavedInc,
+      co2_avoided_increment: co2Inc,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 2. Non-blocking asynchronous backend call
+    try {
+      const res = await api.post('/student/points/earn', {
+        student_id: 'usr-student-01',
+        points: points,
+        action: action,
+        details: details,
+      });
+      return res.data;
+    } catch {
+      return {
+        success: true,
+        student_id: 'usr-student-01',
+        points_added: points,
+        current_points: 580 + points,
+        action: action,
+        message: `+${points} Eco Points recorded!`,
+      };
+    }
+  },
   getLeaderboard: async () => {
     try {
       const res = await api.get('/student/leaderboard');
@@ -159,6 +201,81 @@ export const studentApi = {
       return null;
     }
   },
+};
+
+export const broadcastPointsEarned = (payload) => {
+  const data = {
+    type: 'POINTS_EARNED',
+    student_id: payload.student_id || 'usr-student-01',
+    student_name: payload.student_name || 'Nitin Sharma',
+    points_added: Number(payload.points_added) || 0,
+    action: payload.action || 'eco_action',
+    details: payload.details || '',
+    meals_saved_increment: Number(payload.meals_saved_increment) || 0,
+    co2_avoided_increment: Number(payload.co2_avoided_increment) || 0,
+    timestamp: payload.timestamp || new Date().toISOString(),
+    _t: Date.now(),
+  };
+
+  // 1. In-window synchronous CustomEvent (0ms)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('messwise-points-updated', { detail: data }));
+  }
+
+  // 2. BroadcastChannel for same origin/port tabs
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      const bc = new BroadcastChannel('messwise-points-channel');
+      bc.postMessage(data);
+      bc.close();
+    }
+  } catch (_) {}
+
+  // 3. Storage event for cross-port tabs (port 3001, 3002, 3003)
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('messwise_live_student_points', JSON.stringify(data));
+      const curr = Number(localStorage.getItem('messwise_cached_student_points') || '580');
+      localStorage.setItem('messwise_cached_student_points', String(curr + (data.points_added || 0)));
+    }
+  } catch (_) {}
+};
+
+export const subscribeToPointsEarned = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleCustomEvent = (e) => {
+    if (e.detail) callback(e.detail);
+  };
+  window.addEventListener('messwise-points-updated', handleCustomEvent);
+
+  const handleStorageEvent = (e) => {
+    if (e.key === 'messwise_live_student_points' && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        callback(parsed);
+      } catch (_) {}
+    }
+  };
+  window.addEventListener('storage', handleStorageEvent);
+
+  let bc;
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('messwise-points-channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'POINTS_EARNED') {
+          callback(event.data);
+        }
+      };
+    }
+  } catch (_) {}
+
+  return () => {
+    window.removeEventListener('messwise-points-updated', handleCustomEvent);
+    window.removeEventListener('storage', handleStorageEvent);
+    if (bc) bc.close();
+  };
 };
 
 export const preferenceApi = {

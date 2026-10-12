@@ -150,4 +150,41 @@ export const ngoApi = {
   },
 };
 
+export const subscribeToPointsEarned = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleCustomEvent = (e) => {
+    if (e.detail) callback(e.detail);
+  };
+  window.addEventListener('messwise-points-updated', handleCustomEvent);
+
+  const handleStorageEvent = (e) => {
+    if (e.key === 'messwise_live_student_points' && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        callback(parsed);
+      } catch (_) {}
+    }
+  };
+  window.addEventListener('storage', handleStorageEvent);
+
+  let bc;
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('messwise-points-channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'POINTS_EARNED') {
+          callback(event.data);
+        }
+      };
+    }
+  } catch (_) {}
+
+  return () => {
+    window.removeEventListener('messwise-points-updated', handleCustomEvent);
+    window.removeEventListener('storage', handleStorageEvent);
+    if (bc) bc.close();
+  };
+};
+
 export default api;

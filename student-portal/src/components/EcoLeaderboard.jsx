@@ -22,7 +22,7 @@ import {
   Ticket,
   FileText
 } from 'lucide-react';
-import { studentApi } from '../api/client';
+import { studentApi, subscribeToPointsEarned } from '../api/client';
 
 const DEFAULT_LEADERBOARD = [
   {
@@ -200,6 +200,36 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
   useEffect(() => {
     fetchLeaderboard();
   }, [currentStudent?.eco_points, currentStudent?.meals_saved]);
+
+  useEffect(() => {
+    const unsub = subscribeToPointsEarned((data) => {
+      if (data && data.points_added > 0) {
+        setLeaderboardData((prev) => {
+          const targetId = data.student_id || 'usr-student-01';
+          const updated = prev.map((item) => {
+            if (item.id === targetId || item.is_current_user) {
+              const newPts = item.eco_points + data.points_added;
+              const newSaved = item.meals_saved + (data.meals_saved_increment || 0);
+              const newCo2 = Number((item.co2_avoided_kg + (data.co2_avoided_increment || 0)).toFixed(1));
+              return { ...item, eco_points: newPts, meals_saved: newSaved, co2_avoided_kg: newCo2 };
+            }
+            return item;
+          }).sort((a, b) => b.eco_points - a.eco_points);
+
+          const ranked = updated.map((it, idx) => ({ ...it, rank: idx + 1 }));
+          const me = ranked.find((it) => it.id === targetId || it.is_current_user);
+          if (me) {
+            setCurrentUserRank(me.rank);
+            setCurrentUserPoints(me.eco_points);
+            const above = ranked[me.rank - 2];
+            setPointsToNext(above ? Math.max(0, above.eco_points - me.eco_points + 1) : 0);
+          }
+          return ranked;
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const fetchLeaderboard = async () => {
     try {

@@ -21,6 +21,7 @@ import {
   Utensils
 } from 'lucide-react';
 import axios from 'axios';
+import { subscribeToPointsEarned } from '../api/client';
 
 const DEFAULT_LEADERBOARD = [
   {
@@ -194,6 +195,28 @@ const EcoLeaderboard = () => {
 
   useEffect(() => {
     fetchLeaderboard();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeToPointsEarned((data) => {
+      if (data && data.points_added > 0) {
+        setLeaderboardData((prev) => {
+          const targetId = data.student_id || 'usr-student-01';
+          const updated = prev.map((item) => {
+            if (item.id === targetId || item.is_current_user || item.name === (data.student_name || 'Nitin Sharma')) {
+              const newPts = item.eco_points + data.points_added;
+              const newSaved = item.meals_saved + (data.meals_saved_increment || 0);
+              const newCo2 = Number((item.co2_avoided_kg + (data.co2_avoided_increment || 0)).toFixed(1));
+              return { ...item, eco_points: newPts, meals_saved: newSaved, co2_avoided_kg: newCo2 };
+            }
+            return item;
+          }).sort((a, b) => b.eco_points - a.eco_points);
+
+          return updated.map((it, idx) => ({ ...it, rank: idx + 1 }));
+        });
+      }
+    });
+    return () => unsub();
   }, []);
 
   const fetchLeaderboard = async () => {

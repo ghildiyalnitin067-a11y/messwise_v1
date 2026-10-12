@@ -20,6 +20,28 @@ class TodayMealsResponse(BaseModel):
     meals: Dict[str, MealItemOut]
 
 
+class WeeklyDayMenu(BaseModel):
+    day: str
+    date: str
+    is_today: bool
+    breakfast: str
+    lunch: str
+    snacks: str
+    dinner: str
+    time_windows: Optional[Dict[str, str]] = None
+    deadlines: Optional[Dict[str, str]] = None
+    updated_session: Optional[str] = None
+
+
+class WeeklyMenuResponse(BaseModel):
+    hostel: str
+    date: str
+    week_start: str
+    week_end: str
+    schedule: List[WeeklyDayMenu]
+    message: Optional[str] = "Weekly dining menu retrieved successfully."
+
+
 class ToggleBookingRequest(BaseModel):
     meal_session: str
     date: Optional[str] = None
@@ -102,3 +124,17 @@ class StudentLeaderboardResponse(BaseModel):
     points_to_next_rank: int
     total_participants: int
     leaderboard: List[StudentLeaderboardEntry]
+
+
+class PointsEarnRequest(BaseModel):
+    points: int
+    action: str = "Eco Action"
+    student_id: Optional[str] = None
+
+
+class PointsEarnResponse(BaseModel):
+    success: bool
+    points_added: int
+    total_eco_points: int
+    rank: int
+    message: str

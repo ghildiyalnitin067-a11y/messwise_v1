@@ -9,6 +9,8 @@ from app.models.user import User
 from app.models.surplus import SurplusRequest
 from app.services.admin_service import admin_service
 from app.services.forecast_service import forecast_service
+from app.services.student_service import student_service
+from app.schemas.student import WeeklyMenuResponse
 from app.schemas.admin import (
     AdminStatsResponse,
     ProductionLogRequest,
@@ -124,6 +126,13 @@ async def update_daily_menu(
     db: AsyncSession = Depends(get_db)
 ):
     return await admin_service.update_daily_menu(db=db, req=req)
+
+
+@router.get("/menu/weekly", response_model=WeeklyMenuResponse)
+async def get_admin_weekly_menu(
+    db: AsyncSession = Depends(get_db)
+):
+    return await student_service.get_weekly_menu(db=db)
 
 
 @router.get("/requests")

@@ -252,13 +252,52 @@ export const adminApi = {
       return null;
     }
   },
-  updateMenu: async (data) => {
+  getWeeklyMenu: async () => {
     try {
-      const res = await api.post('/admin/menu', data);
-      return res.data;
+      const res = await api.get('/admin/menu/weekly');
+      if (res?.data?.schedule) return res.data;
+      return null;
     } catch {
       return null;
     }
+  },
+  updateMenu: async (data) => {
+    let result = null;
+    try {
+      const res = await api.post('/admin/menu', data);
+      result = res.data;
+    } catch (e) {
+      console.warn('Backend updateMenu request failed, using client broadcast', e);
+    }
+
+    try {
+      const eventPayload = {
+        type: 'MENU_PUSHED',
+        session: data.session,
+        menu: data.menu,
+        day: data.day || 'today',
+        append_dish: Boolean(data.append_dish),
+        time_window: data.time_window,
+        deadline: data.deadline,
+        timestamp: Date.now(),
+        sessions: result?.sessions || null,
+      };
+
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc1 = new BroadcastChannel('messwise-menu-channel');
+        bc1.postMessage(eventPayload);
+        setTimeout(() => bc1.close(), 1000);
+
+        const bc2 = new BroadcastChannel('messwise-surplus-channel');
+        bc2.postMessage(eventPayload);
+        setTimeout(() => bc2.close(), 1000);
+      }
+
+      localStorage.setItem('messwise_menu_update', JSON.stringify(eventPayload));
+      window.dispatchEvent(new CustomEvent('messwise-menu-updated', { detail: eventPayload }));
+    } catch (_) {}
+
+    return result;
   },
   getNgoRequests: async () => {
     try {
@@ -906,6 +945,43 @@ export const analyticsApi = {
       throw err;
     }
   }
+};
+
+export const subscribeToPointsEarned = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleCustomEvent = (e) => {
+    if (e.detail) callback(e.detail);
+  };
+  window.addEventListener('messwise-points-updated', handleCustomEvent);
+
+  const handleStorageEvent = (e) => {
+    if (e.key === 'messwise_live_student_points' && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        callback(parsed);
+      } catch (_) {}
+    }
+  };
+  window.addEventListener('storage', handleStorageEvent);
+
+  let bc;
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('messwise-points-channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'POINTS_EARNED') {
+          callback(event.data);
+        }
+      };
+    }
+  } catch (_) {}
+
+  return () => {
+    window.removeEventListener('messwise-points-updated', handleCustomEvent);
+    window.removeEventListener('storage', handleStorageEvent);
+    if (bc) bc.close();
+  };
 };
 
 export default api;

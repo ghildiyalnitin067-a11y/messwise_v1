@@ -16,7 +16,7 @@ import {
 import Sidebar from './components/Sidebar';
 import RequestModal from './components/RequestModal';
 import LoginModal from './components/LoginModal';
-import { ngoApi, authApi } from './api/client';
+import { ngoApi, authApi, subscribeToPointsEarned } from './api/client';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -24,6 +24,8 @@ function App() {
   const [selectedSurplusForClaim, setSelectedSurplusForClaim] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem('messwise_jwt_token')));
+  const [liveStudentEcoAction, setLiveStudentEcoAction] = useState(null);
+  const [campusRescuedMeals, setCampusRescuedMeals] = useState(4320);
 
   const [surplusListings, setSurplusListings] = useState([
     {
@@ -140,10 +142,26 @@ function App() {
     const handleWindowFocus = () => fetchSurplusData();
     window.addEventListener('focus', handleWindowFocus);
 
+    const unsubPoints = subscribeToPointsEarned((data) => {
+      if (data && data.points_added > 0) {
+        if (data.meals_saved_increment > 0) {
+          setCampusRescuedMeals((prev) => prev + data.meals_saved_increment);
+        }
+        setLiveStudentEcoAction({
+          studentName: data.student_name || 'Nitin Sharma',
+          points: data.points_added,
+          action: data.details || data.action || 'Sustainability Action',
+          mealsSaved: data.meals_saved_increment || 0,
+        });
+        setTimeout(() => setLiveStudentEcoAction(null), 5500);
+      }
+    });
+
     return () => {
       clearInterval(pollInterval);
       if (bc) bc.close();
       window.removeEventListener('focus', handleWindowFocus);
+      if (unsubPoints) unsubPoints();
     };
   }, []);
 
@@ -317,6 +335,29 @@ function App() {
           </div>
         </header>
 
+        {liveStudentEcoAction && (
+          <div style={{
+            background: 'linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%)',
+            border: '1px solid #86efac',
+            borderRadius: '10px',
+            padding: '0.65rem 1rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            color: '#166534',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(34,197,94,0.15)',
+          }}>
+            <Sparkles size={16} color="#16a34a" />
+            <span>
+              <strong>🌱 Campus Zero-Waste Action (Live 0ms):</strong> {liveStudentEcoAction.studentName} earned <strong>+{liveStudentEcoAction.points} Eco Points</strong> ({liveStudentEcoAction.action})
+              {liveStudentEcoAction.mealsSaved > 0 ? ` • Diverted ${liveStudentEcoAction.mealsSaved} meal from disposal!` : ''}
+            </span>
+          </div>
+        )}
+
         {/* Tab 1: Live Surplus Feed */}
         {activeTab === 'dashboard' && (
           <div>
@@ -347,7 +388,7 @@ function App() {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Meals Rescued</div>
-                  <div className="kpi-value">4,320</div>
+                  <div className="kpi-value">{campusRescuedMeals.toLocaleString()}</div>
                   <div className="kpi-meta">Total campus term diversion</div>
                 </div>
                 <div className="kpi-icon brand">

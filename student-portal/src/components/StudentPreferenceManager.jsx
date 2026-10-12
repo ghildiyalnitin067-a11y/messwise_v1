@@ -22,7 +22,7 @@ import {
 import confetti from 'canvas-confetti';
 import { preferenceApi } from '../api/client';
 
-const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onClose = null }) => {
+const StudentPreferenceManager = ({ onPreferenceSubmitted, onPointsEarned, isModal = false, onClose = null }) => {
   const [activeSession, setActiveSession] = useState('lunch');
   const [pollData, setPollData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,6 +105,10 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
           setPollData(res.updated_poll);
         } else {
           await loadPoll(activeSession);
+        }
+
+        if (onPointsEarned) {
+          onPointsEarned(res?.eco_points_earned || 15);
         }
 
         if (onPreferenceSubmitted) {

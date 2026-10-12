@@ -1,6 +1,6 @@
 import random
 from typing import Optional, List, Dict
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
@@ -12,6 +12,8 @@ from app.services.impact_service import impact_service
 from app.ml.stock_analysis_engine import stock_engine
 from app.schemas.student import (
     TodayMealsResponse,
+    WeeklyMenuResponse,
+    WeeklyDayMenu,
     MealItemOut,
     ToggleBookingRequest,
     ToggleBookingResponse,
@@ -21,7 +23,9 @@ from app.schemas.student import (
     BookingHistoryItem,
     StudentImpactResponse,
     StudentLeaderboardResponse,
-    StudentLeaderboardEntry
+    StudentLeaderboardEntry,
+    PointsEarnRequest,
+    PointsEarnResponse
 )
 
 
@@ -109,6 +113,123 @@ class StudentService:
             date=today.strftime("%a, %d %b %Y"),
             hostel=hostel_name,
             meals=meals_dict
+        )
+
+    DEFAULT_WEEKLY_SCHEDULE = {
+        "Monday": {
+            "breakfast": "Idli Sambhar + Coconut Chutney",
+            "lunch": "Chole + Jeera Rice + Roti + Kachumber Salad",
+            "snacks": "Ginger Tea + Biscuits / Mathri",
+            "dinner": "Mix Dal + Sev Tamatar + Chapati + Rice"
+        },
+        "Tuesday": {
+            "breakfast": "Poha + Boiled Eggs / Banana + Milk",
+            "lunch": "Rajma + Jeera Rice + Roti + Salad",
+            "snacks": "Samosa / Poha + Mint Chutney + Hot Masala Chai",
+            "dinner": "Paneer Butter Masala + Roti + Dal Tadka"
+        },
+        "Wednesday": {
+            "breakfast": "Aloo Paratha + Curd + Pickle",
+            "lunch": "Kadhi Pakoda + Steamed Rice + Roti + Salad",
+            "snacks": "Filter Coffee + Bun Maska",
+            "dinner": "Egg Curry / Paneer Bhurji + Tawa Roti + Rice"
+        },
+        "Thursday": {
+            "breakfast": "Upma + Coconut Chutney + Sprouts",
+            "lunch": "Dal Makhani + Tandoori Roti + Jeera Rice",
+            "snacks": "Veg Samosa + Green Mint Chutney",
+            "dinner": "Veg Biryani + Cucumber Raita + Mirchi Salan"
+        },
+        "Friday": {
+            "breakfast": "Puri Bhaji + Sooji Halwa",
+            "lunch": "Sambar Rice + Beans Poriyal + Appalam",
+            "snacks": "Crispy Corn Chaat + Fresh Lemonade",
+            "dinner": "Matar Paneer + Jeera Pulao + Butter Roti"
+        },
+        "Saturday": {
+            "breakfast": "Masala Dosa + Sambhar + Coconut Chutney",
+            "lunch": "Moong Dal Khichdi + Baingan Bharta + Papad",
+            "snacks": "Aloo Bonda + Kadak Masala Chai",
+            "dinner": "Dal Tadka + Jeera Rice + Seasonal Sabzi + Roti"
+        },
+        "Sunday": {
+            "breakfast": "Pav Bhaji + Seasonal Fruit Juice",
+            "lunch": "Special Dum Biryani Feast + Mirchi Ka Salan + Raita",
+            "snacks": "Dhokla + Mint Chutney + Green Tea",
+            "dinner": "Light Moong Khichdi + Curd + Roti"
+        }
+    }
+
+    async def get_weekly_menu(self, db: AsyncSession, hostel_id: Optional[str] = None) -> WeeklyMenuResponse:
+        today = date.today()
+        # Ensure today's schedule exists so today's live items match
+        await self.get_today_meals(db=db)
+
+        hostel_stmt = select(Hostel).limit(1)
+        h_res = await db.execute(hostel_stmt)
+        hostel = h_res.scalar_one_or_none()
+        hostel_name = hostel.name if hostel else "Hostel A (Aryabhatta)"
+        hid = hostel.id if hostel else "h-hostel-a"
+
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+
+        # Query all MealSchedules for this week
+        stmt = select(MealSchedule).where(
+            MealSchedule.date >= start_of_week,
+            MealSchedule.date <= end_of_week
+        )
+        res = await db.execute(stmt)
+        all_scheds = res.scalars().all()
+
+        schedule_list: List[WeeklyDayMenu] = []
+
+        default_time_windows = {
+            "breakfast": "7:00 AM - 9:00 AM",
+            "lunch": "12:00 PM - 2:00 PM",
+            "snacks": "4:30 PM - 6:00 PM",
+            "dinner": "7:30 PM - 9:30 PM"
+        }
+        default_deadlines = {
+            "breakfast": "6:30 AM",
+            "lunch": "10:30 AM",
+            "snacks": "3:30 PM",
+            "dinner": "5:30 PM"
+        }
+
+        for i in range(7):
+            cur_date = start_of_week + timedelta(days=i)
+            day_name = cur_date.strftime("%A")
+            is_today = (cur_date == today)
+
+            day_scheds = [s for s in all_scheds if s.date == cur_date]
+            sched_map = {s.session.lower(): s.menu for s in day_scheds if s.menu}
+
+            baseline = self.DEFAULT_WEEKLY_SCHEDULE.get(day_name, self.DEFAULT_WEEKLY_SCHEDULE["Monday"])
+
+            b_menu = sched_map.get("breakfast", baseline["breakfast"])
+            l_menu = sched_map.get("lunch", baseline["lunch"])
+            s_menu = sched_map.get("snacks", baseline["snacks"])
+            d_menu = sched_map.get("dinner", baseline["dinner"])
+
+            schedule_list.append(WeeklyDayMenu(
+                day=day_name,
+                date=cur_date.strftime("%d %b %Y"),
+                is_today=is_today,
+                breakfast=b_menu,
+                lunch=l_menu,
+                snacks=s_menu,
+                dinner=d_menu,
+                time_windows=default_time_windows,
+                deadlines=default_deadlines
+            ))
+
+        return WeeklyMenuResponse(
+            hostel=hostel_name,
+            date=today.strftime("%a, %d %b %Y"),
+            week_start=start_of_week.strftime("%d %b %Y"),
+            week_end=end_of_week.strftime("%d %b %Y"),
+            schedule=schedule_list
         )
 
     async def toggle_booking(
@@ -479,6 +600,55 @@ class StudentService:
             points_to_next_rank=max(0, points_to_next),
             total_participants=len(leaderboard_items),
             leaderboard=leaderboard_items
+        )
+
+    async def earn_points(
+        self,
+        db: AsyncSession,
+        req: PointsEarnRequest,
+        student_id: Optional[str] = None
+    ) -> PointsEarnResponse:
+        sid = student_id or req.student_id or "usr-student-01"
+        stmt = select(StudentProfile).where(
+            (StudentProfile.id == sid) | (StudentProfile.user_id == sid)
+        )
+        res = await db.execute(stmt)
+        profile = res.scalar_one_or_none()
+
+        if not profile:
+            stmt2 = select(StudentProfile).limit(1)
+            res2 = await db.execute(stmt2)
+            profile = res2.scalar_one_or_none()
+
+        if profile:
+            profile.eco_points = (profile.eco_points or 580) + req.points
+            if "save" in req.action.lower() or "cancel" in req.action.lower():
+                profile.meals_saved = (profile.meals_saved or 14) + 1
+                profile.co2_avoided_kg = round((profile.co2_avoided_kg or 24.0) + 0.35, 2)
+            await db.commit()
+            await db.refresh(profile)
+            cur_pts = profile.eco_points
+            cur_rank = profile.rank or 5
+        else:
+            cur_pts = 580 + req.points
+            cur_rank = 5
+
+        await impact_service.record_event(
+            db=db,
+            event_type="ECO_POINTS_AWARDED",
+            title=f"+{req.points} Eco Points earned by {profile.name if profile else 'Student'}",
+            description=f"Action: {req.action}. Green campus points balance: {cur_pts}.",
+            quantity=req.points,
+            actor_role="student",
+            actor_name=profile.name if profile else "Nitin Sharma"
+        )
+
+        return PointsEarnResponse(
+            success=True,
+            points_added=req.points,
+            total_eco_points=cur_pts,
+            rank=cur_rank,
+            message=f"+{req.points} Eco Points awarded successfully!"
         )
 
 

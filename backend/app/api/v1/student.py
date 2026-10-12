@@ -9,13 +9,16 @@ from app.models.user import User
 from app.services.student_service import student_service
 from app.schemas.student import (
     TodayMealsResponse,
+    WeeklyMenuResponse,
     ToggleBookingRequest,
     ToggleBookingResponse,
     FeedbackRequest,
     FeedbackResponse,
     BookingHistoryResponse,
     StudentImpactResponse,
-    StudentLeaderboardResponse
+    StudentLeaderboardResponse,
+    PointsEarnRequest,
+    PointsEarnResponse
 )
 
 router = APIRouter(prefix="/student", tags=["Student Portal Operations"])
@@ -48,6 +51,14 @@ async def get_today_meals(
 ):
     student_id, _ = student_info
     return await student_service.get_today_meals(db=db, student_id=student_id)
+
+
+@router.get("/menu/weekly", response_model=WeeklyMenuResponse)
+@router.get("/meals/weekly", response_model=WeeklyMenuResponse)
+async def get_weekly_dining_menu(
+    db: AsyncSession = Depends(get_db)
+):
+    return await student_service.get_weekly_menu(db=db)
 
 
 @router.post("/toggle-booking", response_model=ToggleBookingResponse)
@@ -96,3 +107,14 @@ async def get_leaderboard(
 ):
     student_id, _ = student_info
     return await student_service.get_leaderboard(db=db, student_id=student_id)
+
+
+@router.post("/points/earn", response_model=PointsEarnResponse)
+@router.post("/points/sync", response_model=PointsEarnResponse)
+async def earn_eco_points(
+    req: PointsEarnRequest,
+    student_info: tuple = Depends(get_optional_student_user),
+    db: AsyncSession = Depends(get_db)
+):
+    student_id, _ = student_info
+    return await student_service.earn_points(db=db, req=req, student_id=student_id)
