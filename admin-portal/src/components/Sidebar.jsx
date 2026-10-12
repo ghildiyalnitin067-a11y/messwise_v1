@@ -5,13 +5,13 @@ import {
   TrendingUp, 
   Sparkles, 
   ShieldCheck, 
-  LogOut,
   Boxes,
   Trophy,
   Utensils,
   Droplets,
   ThumbsUp,
-  BarChart3
+  BarChart3,
+  Bike
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
@@ -118,6 +118,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         </button>
 
         <div className="nav-section-title" style={{ marginTop: '0.5rem' }}>Redistribution</div>
+
+        <button
+          className={`nav-item ${activeTab === 'greenroute' ? 'active' : ''}`}
+          onClick={() => onTabChange('greenroute')}
+        >
+          <div className="nav-label">
+            <Bike size={16} />
+            <span>GreenRoute Fleet</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#ecfeff', color: '#0891b2', fontWeight: 800 }}>Live Fleet</span>
+        </button>
 
         <button
           className={`nav-item ${activeTab === 'surplus' ? 'active' : ''}`}

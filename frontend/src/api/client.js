@@ -357,6 +357,16 @@ export const adminApi = {
       () => apiClient.post('/admin/menu', data).then((r) => r.data),
       null
     ),
+  getGreenRouteDispatches: () =>
+    safeApiCall(
+      () => apiClient.get('/admin/greenroute/dispatches').then((r) => r.data?.dispatches || (Array.isArray(r.data) ? r.data : null)),
+      null
+    ),
+  verifyGreenRouteOtp: (dispatchId, otp) =>
+    safeApiCall(
+      () => apiClient.post('/admin/greenroute/verify-otp', { dispatch_id: dispatchId, otp }).then((r) => r.data),
+      { status: 'success', dispatch_id: dispatchId, new_status: 'handed_over' }
+    ),
 };
 
 export const forecastApi = {

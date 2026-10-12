@@ -14,10 +14,10 @@ import {
   Sparkles,
   Layers,
   User,
-  History,
   Trophy,
   Droplets,
-  ThumbsUp
+  ThumbsUp,
+  Bike
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
@@ -39,6 +39,7 @@ const Sidebar = ({ role = 'student', activeTab, onTabChange }) => {
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
     { id: 'preferences', label: 'Student Preferences', icon: ThumbsUp, badge: 'Zero-Waste' },
     { id: 'menu', label: 'Daily Menu Operations', icon: Utensils, badge: 'Live Sync' },
+    { id: 'greenroute', label: 'GreenRoute Dispatches', icon: Bike, badge: 'Live' },
     { id: 'production', label: 'Batch Production Logs', icon: ChefHat },
     { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp, badge: '94%' },
     { id: 'uco', label: 'Used Cooking Oil', icon: Droplets, badge: 'Eco Net' },

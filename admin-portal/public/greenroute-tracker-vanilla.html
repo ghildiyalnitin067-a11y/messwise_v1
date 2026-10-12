@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GreenRoute Quick-Commerce Tracker | Vanilla JS Demo</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+
+  <!-- Tailwind CSS CDN for Vanilla environments -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen p-6 font-['Plus_Jakarta_Sans',sans-serif]">
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 font-['Outfit',sans-serif]">Messwise Admin Portal</h1>
+        <p class="text-xs text-slate-500 mt-1">GreenRoute Delivery Partner Live Telemetry & Handover Verification (Vanilla Component Demo)</p>
+      </div>
+      <a href="/" class="text-xs font-semibold px-3 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100 no-underline">
+        ← Back to React Admin Portal
+      </a>
+    </div>
+
+    <!-- Target mount container for GreenRouteTrackerVanilla -->
+    <div id="greenroute-vanilla-mount"></div>
+
+    <div class="mt-4 p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+      <strong>Vanilla JS Component Initialized:</strong> This component is dynamically mounted via <code>new GreenRouteTrackerVanilla({ container: '#greenroute-vanilla-mount' })</code>. It supports full interactive tab switching, live timeline manipulation, OTP reveal/copy/verify workflow, and plate verification.
+    </div>
+  </div>
+
+  <script type="module">
+    import { GreenRouteTrackerVanilla } from '/src/components/GreenRouteTrackerVanilla.js';
+
+    const tracker = new GreenRouteTrackerVanilla({
+      container: '#greenroute-vanilla-mount',
+      onHandoverSuccess: (dispatch) => {
+        alert(`Handover Successful for ${dispatch.id} (${dispatch.batchTitle})! Rider ${dispatch.rider?.name} is en route.`);
+      }
+    });
+  </script>
+</body>
+</html>

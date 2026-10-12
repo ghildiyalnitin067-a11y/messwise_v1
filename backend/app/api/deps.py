@@ -22,20 +22,31 @@ async def get_current_user(
             detail="Authentication credentials were not provided"
         )
 
-    if auth.credentials.startswith("mock-admin"):
-        user_id = "usr-admin-01"
-    elif auth.credentials.startswith("mock-ngo"):
-        user_id = "usr-ngo-01"
-    elif auth.credentials.startswith("mock-student"):
-        user_id = "usr-student-01"
-    else:
-        payload = decode_access_token(auth.credentials)
-        if not payload or "sub" not in payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired authentication token"
+    # Support development & demo mock tokens
+    if auth.credentials.startswith("mock-"):
+        role = "admin" if "admin" in auth.credentials else "ngo" if "ngo" in auth.credentials else "student"
+        stmt = (
+            select(User)
+            .options(
+                selectinload(User.student_profile),
+                selectinload(User.admin_profile),
+                selectinload(User.ngo_profile)
             )
-        user_id = payload["sub"]
+            .where(User.role == role)
+            .limit(1)
+        )
+        res = await db.execute(stmt)
+        mock_user = res.scalar_one_or_none()
+        if mock_user:
+            return mock_user
+
+    payload = decode_access_token(auth.credentials)
+    if not payload or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token"
+        )
+    user_id = payload["sub"]
     stmt = (
         select(User)
         .options(
@@ -60,6 +71,48 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_optional_user(
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    if not auth or not auth.credentials:
+        return None
+
+    if auth.credentials.startswith("mock-"):
+        role = "admin" if "admin" in auth.credentials else "ngo" if "ngo" in auth.credentials else "student"
+        stmt = (
+            select(User)
+            .options(
+                selectinload(User.student_profile),
+                selectinload(User.admin_profile),
+                selectinload(User.ngo_profile)
+            )
+            .where(User.role == role)
+            .limit(1)
+        )
+        res = await db.execute(stmt)
+        return res.scalar_one_or_none()
+
+    try:
+        payload = decode_access_token(auth.credentials)
+        if not payload or "sub" not in payload:
+            return None
+        user_id = payload["sub"]
+        stmt = (
+            select(User)
+            .options(
+                selectinload(User.student_profile),
+                selectinload(User.admin_profile),
+                selectinload(User.ngo_profile)
+            )
+            .where(User.id == user_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+    except Exception:
+        return None
 
 
 def require_role(allowed_roles: List[str]):
