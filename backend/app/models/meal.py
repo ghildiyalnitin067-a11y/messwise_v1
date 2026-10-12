@@ -69,3 +69,33 @@ class DailyProductionLog(Base):
 
     # Relationships
     hostel = relationship("Hostel", back_populates="production_logs")
+
+
+class MealOptionCandidate(Base):
+    __tablename__ = "meal_option_candidates"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    hostel_id = Column(String(36), ForeignKey("hostels.id"), nullable=True)
+    date = Column(Date, default=date.today, index=True, nullable=False)
+    session = Column(String(50), nullable=False)  # lunch, dinner, breakfast, snacks
+    category = Column(String(100), nullable=False)  # Main Course, Dal & Lentils, Breads & Rice, Sides & Dessert
+    dish_name = Column(String(200), nullable=False)
+    description = Column(String(255), nullable=True)
+    dietary_type = Column(String(50), default="Vegetarian")  # Vegetarian, Vegan, High-Protein
+    votes = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)  # True = included in active menu, False = pruned due to low preference
+    waste_risk = Column(String(50), default="Low")  # Low, Moderate, High Risk
+    min_threshold_pct = Column(Float, default=20.0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class StudentPreferenceVote(Base):
+    __tablename__ = "student_preference_votes"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    student_id = Column(String(36), ForeignKey("student_profiles.id"), nullable=False)
+    date = Column(Date, default=date.today, index=True, nullable=False)
+    session = Column(String(50), nullable=False)
+    selected_option_ids = Column(Text, nullable=False)  # JSON-serialized list of option ids or names
+    notes = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

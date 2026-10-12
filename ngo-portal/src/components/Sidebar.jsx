@@ -69,25 +69,6 @@ const Sidebar = ({ activeTab, onTabChange }) => {
       </div>
 
       <div className="sidebar-footer">
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0 0.5rem' }}>
-          Switch Workspaces
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <a
-            href="http://localhost:3001"
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            Student
-          </a>
-          <a
-            href="http://localhost:3002"
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            Admin
-          </a>
-        </div>
 
         <div className="user-mini-card">
           <div className="user-mini-info">

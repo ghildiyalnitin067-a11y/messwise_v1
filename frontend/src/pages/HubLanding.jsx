@@ -108,15 +108,15 @@ const HubLanding = () => {
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <Link to="/student" className="btn btn-warm">
-                <Utensils size={15} /> Student Meal RSVPs
-              </Link>
-              <Link to="/admin" className="btn btn-secondary">
-                <ChefHat size={15} /> Mess Operations Hub
-              </Link>
-              <Link to="/ngo" className="btn btn-secondary">
-                <HeartHandshake size={15} /> NGO Rescue Feed
-              </Link>
+              <a href="http://localhost:3001" className="btn btn-warm">
+                <Utensils size={15} /> Student Meal RSVPs (Port 3001)
+              </a>
+              <a href="http://localhost:3002" className="btn btn-secondary">
+                <ChefHat size={15} /> Mess Operations Hub (Port 3002)
+              </a>
+              <a href="http://localhost:3003" className="btn btn-secondary">
+                <HeartHandshake size={15} /> NGO Rescue Feed (Port 3003)
+              </a>
             </div>
           </div>
         </section>
@@ -207,9 +207,9 @@ const HubLanding = () => {
               </ul>
             </div>
             <div className="panel-header" style={{ backgroundColor: 'var(--bg-canvas-subtle)' }}>
-              <Link to="/student" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                Enter Student Portal <ArrowRight size={14} />
-              </Link>
+              <a href="http://localhost:3001" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                Enter Student Portal (Port 3001) <ArrowRight size={14} />
+              </a>
             </div>
           </div>
 
@@ -243,9 +243,9 @@ const HubLanding = () => {
               </ul>
             </div>
             <div className="panel-header" style={{ backgroundColor: 'var(--bg-canvas-subtle)' }}>
-              <Link to="/admin" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                Enter Operations Hub <ArrowRight size={14} />
-              </Link>
+              <a href="http://localhost:3002" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                Enter Operations Hub (Port 3002) <ArrowRight size={14} />
+              </a>
             </div>
           </div>
 
@@ -279,9 +279,9 @@ const HubLanding = () => {
               </ul>
             </div>
             <div className="panel-header" style={{ backgroundColor: 'var(--bg-canvas-subtle)' }}>
-              <Link to="/ngo" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                Enter NGO Portal <ArrowRight size={14} />
-              </Link>
+              <a href="http://localhost:3003" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                Enter NGO Portal (Port 3003) <ArrowRight size={14} />
+              </a>
             </div>
           </div>
 

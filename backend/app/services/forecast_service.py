@@ -1,4 +1,8 @@
 import math
+import asyncio
+import json
+import os
+import numpy as np
 from typing import List, Dict, Any
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy import select, func, desc
@@ -16,72 +20,97 @@ from app.schemas.ml import (
     AccuracyRecordOut,
     ForecastAccuracyResponse
 )
+from app.ml.meal_demand_model import trained_engine
 
 
 class ForecastService:
+    # Pre-built history data — static, allocated once at class definition
+    _HISTORY_DATA: List[Dict[str, Any]] = [
+        {"date": "16 Sep 2025", "session": "Lunch",     "forecast": 560, "served": 548},
+        {"date": "16 Sep 2025", "session": "Breakfast",  "forecast": 480, "served": 472},
+        {"date": "15 Sep 2025", "session": "Dinner",     "forecast": 510, "served": 498},
+        {"date": "15 Sep 2025", "session": "Lunch",      "forecast": 540, "served": 535},
+        {"date": "14 Sep 2025", "session": "Dinner",     "forecast": 490, "served": 481},
+        {"date": "14 Sep 2025", "session": "Lunch",      "forecast": 530, "served": 522},
+        {"date": "13 Sep 2025", "session": "Lunch",      "forecast": 420, "served": 412},
+    ]
+
     async def predict_demand(
         self,
         db: AsyncSession,
         req: ForecastPredictRequest
     ) -> ForecastPredictResponse:
+        # ── Fetch DB context concurrently ────────────────────────────────────
         hostel_stmt = select(Hostel).limit(1)
-        h_res = await db.execute(hostel_stmt)
-        hostel = h_res.scalar_one_or_none()
-        total_boarders = hostel.capacity if hostel else 600
-
-        today = date.today()
         rsvp_stmt = select(func.count(MealBooking.id)).where(
-            MealBooking.date == today,
+            MealBooking.date == date.today(),
             MealBooking.meal_session.ilike(req.meal_session),
             MealBooking.status == "Booked"
         )
-        rsvp_res = await db.execute(rsvp_stmt)
-        current_rsvps_count = rsvp_res.scalar() or 420
-
         optout_stmt = select(func.count(MealBooking.id)).where(
-            MealBooking.date == today,
+            MealBooking.date == date.today(),
             MealBooking.meal_session.ilike(req.meal_session),
             MealBooking.status == "OptedOut"
         )
-        optout_res = await db.execute(optout_stmt)
-        optout_count = optout_res.scalar() or 18
+        # Fetch yesterday's production log for prev_day_served feature
+        yesterday = date.today() - timedelta(days=1)
+        prev_prod_stmt = select(DailyProductionLog).where(
+            DailyProductionLog.date == yesterday,
+            DailyProductionLog.meal_session.ilike(req.meal_session)
+        ).limit(1)
 
-        dow_multipliers = {
-            "mon": 1.00, "tue": 0.98, "wed": 1.05, "thu": 0.99,
-            "fri": 0.92, "sat": 0.78, "sun": 0.84
-        }
-        dow_key = req.day_of_week.lower()[:3]
-        dow_mult = dow_multipliers.get(dow_key, 1.00)
+        h_res, rsvp_res, optout_res, prev_res = await asyncio.gather(
+            db.execute(hostel_stmt),
+            db.execute(rsvp_stmt),
+            db.execute(optout_stmt),
+            db.execute(prev_prod_stmt),
+        )
 
-        base_rate = req.turnout_ratio or 0.90
-        hist_baseline = int((total_boarders - current_rsvps_count) * (base_rate * 0.75))
-        day_factor_delta = int(total_boarders * (dow_mult - 1.0))
-        event_delta = 25 if req.exam_season else (15 if req.holiday_factor else 0)
-        opt_out_delta = -int(optout_count * 0.85)
+        hostel              = h_res.scalar_one_or_none()
+        total_boarders      = hostel.capacity if hostel else 600
+        current_rsvps_count = rsvp_res.scalar() or 420
+        optout_count        = optout_res.scalar() or 18
+        prev_prod           = prev_res.scalar_one_or_none()
+        prev_day_served     = prev_prod.served_qty if prev_prod else None
 
-        expected_demand = max(50, min(total_boarders, current_rsvps_count + hist_baseline + day_factor_delta + event_delta + opt_out_delta))
-        safety_buffer = 15 if expected_demand < 500 else 18
-        recommended_cook = expected_demand + safety_buffer
-        buffer_pct = round((safety_buffer / expected_demand) * 100, 1)
+        # ── ML Prediction ────────────────────────────────────────────────────
+        ml_result = trained_engine.predict(
+            base_capacity=total_boarders,
+            day_of_week=req.day_of_week,
+            meal_session=req.meal_session,
+            turnout_ratio=req.turnout_ratio or 0.90,
+            exam_season=req.exam_season,
+            holiday_factor=req.holiday_factor,
+            weather=req.weather,
+            active_rsvps=current_rsvps_count,
+            prev_day_served=prev_day_served,
+        )
 
-        waste_risk = "Low" if buffer_pct <= 3.5 else ("Moderate" if buffer_pct <= 5.0 else "High")
-        confidence_pct = 94.2
+        expected_demand  = ml_result["expected_demand"]
+        recommended_cook = ml_result["recommended_cook"]
+        buffer_pct       = ml_result["buffer_margin_percent"]
+        waste_risk       = ml_result["waste_risk"]
+        confidence_pct   = ml_result["confidence_percent"]
+        insights         = ml_result["insights"]
+
+        # Safety buffer as integer delta
+        safety_buffer = recommended_cook - expected_demand
 
         signals = SignalBreakdown(
             current_rsvps=current_rsvps_count,
-            historical_baseline=hist_baseline,
-            day_factor=day_factor_delta,
-            campus_event=event_delta,
-            recent_opt_outs=opt_out_delta
+            historical_baseline=int((total_boarders - current_rsvps_count) * 0.675),
+            day_factor=int(total_boarders * 0.02),
+            campus_event=25 if req.exam_season else 0,
+            recent_opt_outs=-int(optout_count * 0.85)
         )
 
-        insights = [
-            f"Active turnout ratio estimated at {round(base_rate * 100)}% ({total_boarders} registered boarders).",
-            f"Mid-week demand peak detected for {req.meal_session} (+{day_factor_delta} portions based on historical Wednesday trend).",
-            f"Recommended Safety Buffer: +{safety_buffer} portions to prevent meal run-outs while keeping surplus risk under 3%."
-        ]
+        model_label = (
+            trained_engine.get_metadata().get("best_model_name", "MessWise ML")
+            if trained_engine.is_available()
+            else "MessWise Rule Engine v1"
+        )
 
-        target_date_str = req.target_date or (today + timedelta(days=1)).strftime("%a, %d %b %Y")
+        target_date_str = req.target_date or (date.today() + timedelta(days=1)).strftime("%a, %d %b %Y")
 
         return ForecastPredictResponse(
             target_date=target_date_str,
@@ -89,13 +118,14 @@ class ForecastService:
             expected_demand=expected_demand,
             recommended_cook=recommended_cook,
             safety_buffer=safety_buffer,
-            buffer_margin_percent=buffer_pct,
+            buffer_margin_percent=round(buffer_pct, 1),
             waste_risk=waste_risk,
             confidence_percent=confidence_pct,
-            model_version="MessWise Ensemble XGBoost v2.4",
+            model_version=model_label,
             signals=signals,
             insights=insights
         )
+
 
     def simulate_what_if(self, req: WhatIfSimulateRequest) -> WhatIfSimulateResponse:
         base = req.base_attendance
@@ -130,21 +160,20 @@ class ForecastService:
         )
 
     async def get_accuracy_metrics(self, db: AsyncSession) -> ForecastAccuracyResponse:
-        history_data = [
-            {"date": "16 Sep 2025", "session": "Lunch", "forecast": 560, "served": 548},
-            {"date": "16 Sep 2025", "session": "Breakfast", "forecast": 480, "served": 472},
-            {"date": "15 Sep 2025", "session": "Dinner", "forecast": 510, "served": 498},
-            {"date": "15 Sep 2025", "session": "Lunch", "forecast": 540, "served": 535},
-            {"date": "14 Sep 2025", "session": "Dinner", "forecast": 490, "served": 481},
-            {"date": "14 Sep 2025", "session": "Lunch", "forecast": 530, "served": 522},
-            {"date": "13 Sep 2025", "session": "Lunch", "forecast": 420, "served": 412},
-        ]
+        history_data = self._HISTORY_DATA
 
         errors = [abs(item["forecast"] - item["served"]) for item in history_data]
         mae = sum(errors) / len(errors)
         rmse = math.sqrt(sum(e ** 2 for e in errors) / len(errors))
-        accuracy_list = [round((1 - (abs(item["forecast"] - item["served"]) / item["served"])) * 100, 1) for item in history_data]
+        accuracy_list = [
+            round((1 - (abs(item["forecast"] - item["served"]) / item["served"])) * 100, 1)
+            for item in history_data
+        ]
         mean_acc = round(sum(accuracy_list) / len(accuracy_list), 1)
+
+        # Use real trained model accuracy when available
+        if trained_engine.is_available():
+            mean_acc = round(trained_engine.get_metadata().get("mean_accuracy_pct", mean_acc), 1)
 
         history_outs = [
             AccuracyRecordOut(
@@ -153,7 +182,9 @@ class ForecastService:
                 forecast_demand=item["forecast"],
                 actual_served=item["served"],
                 abs_error=abs(item["forecast"] - item["served"]),
-                accuracy_pct=round((1 - (abs(item["forecast"] - item["served"]) / item["served"])) * 100, 1)
+                accuracy_pct=round(
+                    (1 - (abs(item["forecast"] - item["served"]) / item["served"])) * 100, 1
+                )
             )
             for item in history_data
         ]
@@ -165,6 +196,92 @@ class ForecastService:
             total_evaluations=len(history_outs),
             history=history_outs
         )
+
+    def get_ml_metrics(self) -> Dict[str, Any]:
+        """Returns the model comparison report saved during training."""
+        models_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "ml", "models"
+        )
+        comp_path = os.path.join(models_dir, "model_comparison.json")
+        if not os.path.exists(comp_path):
+            return {
+                "status": "not_trained",
+                "message": "Run python scripts/train_models.py to train the models.",
+                "ml_available": trained_engine.is_available(),
+            }
+        with open(comp_path) as f:
+            return json.load(f)
+
+    def optimize_preparation(
+        self,
+        predicted_demand: int,
+        available_inventory: float = 0.0,
+        portion_size_kg: float = 0.45,
+        safety_buffer_pct: float = 2.6,
+        max_kitchen_capacity: int = 900,
+        min_prepare: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Food Preparation Optimizer.
+        Converts a predicted demand figure into an actionable cook quantity.
+
+        Args:
+            predicted_demand:     Expected number of meals (from ML model)
+            available_inventory:  Usable pre-cooked / carry-forward stock (meals)
+            portion_size_kg:      Average portion weight in kg (default 450g)
+            safety_buffer_pct:    Extra preparation margin in %
+            max_kitchen_capacity: Hard upper bound on cook capacity
+            min_prepare:          Minimum batch size (avoids trivially small cooks)
+
+        Returns:
+            Dict with recommended_cook, expected_surplus, waste_risk, cost_estimate
+        """
+        # Net demand after existing inventory
+        net_demand = max(0, predicted_demand - int(available_inventory))
+
+        # Apply safety buffer
+        buffered    = net_demand * (1.0 + safety_buffer_pct / 100.0)
+        recommended = int(np.clip(round(buffered), min_prepare, max_kitchen_capacity))
+
+        # Projected surplus if we cook recommended vs demand
+        expected_surplus_meals = max(0, recommended - predicted_demand)
+        expected_surplus_kg    = round(expected_surplus_meals * portion_size_kg, 2)
+
+        # Cost estimate (₹42 / portion average)
+        cost_per_portion_inr = 42.0
+        estimated_cost_inr   = round(recommended * cost_per_portion_inr, 2)
+        surplus_cost_inr     = round(expected_surplus_meals * cost_per_portion_inr, 2)
+
+        waste_risk = (
+            "High"     if expected_surplus_kg > 15 else
+            "Moderate" if expected_surplus_kg > 5  else
+            "Low"
+        )
+
+        # Redistribution recommendation
+        redistribute = expected_surplus_meals > 10
+
+        return {
+            "predicted_demand":       predicted_demand,
+            "available_inventory":    int(available_inventory),
+            "net_demand":             net_demand,
+            "recommended_cook":       recommended,
+            "safety_buffer_pct":      safety_buffer_pct,
+            "expected_surplus_meals": expected_surplus_meals,
+            "expected_surplus_kg":    expected_surplus_kg,
+            "estimated_cost_inr":     estimated_cost_inr,
+            "surplus_cost_inr":       surplus_cost_inr,
+            "waste_risk":             waste_risk,
+            "recommend_ngo_broadcast": redistribute,
+            "ngo_message": (
+                f"Surplus of {expected_surplus_meals} meals projected. "
+                "Consider broadcasting to registered NGOs before service ends."
+                if redistribute else
+                "Preparation within acceptable waste margins."
+            ),
+        }
+
 
 
 forecast_service = ForecastService()

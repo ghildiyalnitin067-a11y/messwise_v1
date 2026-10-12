@@ -39,6 +39,7 @@ class StudentProfile(Base):
     meals_booked = Column(Integer, default=0)
     meals_saved = Column(Integer, default=0)
     co2_avoided_kg = Column(Float, default=0.0)
+    eco_points = Column(Integer, default=580)
     rank = Column(Integer, default=1)
     notifications = Column(Boolean, default=True)
 

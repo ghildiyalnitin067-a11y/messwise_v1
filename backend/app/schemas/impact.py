@@ -22,6 +22,11 @@ class AggregateImpact(BaseModel):
     verified_distributions: int
     beneficiaries_served: int
     estimated_co2_avoided_kg: float
+    ingredient_waste_prevented_kg: Optional[float] = 18.5
+    ingredient_co2_avoided_kg: Optional[float] = 22.2
+    uco_processed_litres: Optional[float] = 0.0
+    uco_co2_avoided_kg: Optional[float] = 0.0
+    total_co2_avoided_kg: Optional[float] = 53.4
 
 
 class ImpactLedgerResponse(BaseModel):

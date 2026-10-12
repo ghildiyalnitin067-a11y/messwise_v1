@@ -9,6 +9,7 @@ from app.models.meal import MealSchedule, MealBooking, MealFeedback
 from app.models.user import StudentProfile
 from app.models.hostel import Hostel
 from app.services.impact_service import impact_service
+from app.ml.stock_analysis_engine import stock_engine
 from app.schemas.student import (
     TodayMealsResponse,
     MealItemOut,
@@ -18,7 +19,9 @@ from app.schemas.student import (
     FeedbackResponse,
     BookingHistoryResponse,
     BookingHistoryItem,
-    StudentImpactResponse
+    StudentImpactResponse,
+    StudentLeaderboardResponse,
+    StudentLeaderboardEntry
 )
 
 
@@ -45,51 +48,62 @@ class StudentService:
         hostel = h_res.scalar_one_or_none()
         hostel_name = hostel.name if hostel else "Hostel A (Aryabhatta)"
 
+        default_sessions = [
+            ("breakfast", "Poha + Boiled Eggs / Banana + Milk", "7:00 AM - 9:00 AM", "6:30 AM", True, "TK-BKF-892"),
+            ("lunch", "Rajma + Jeera Rice + Roti + Salad", "12:00 PM - 2:00 PM", "10:30 AM", True, "TK-LCH-419"),
+            ("snacks", "Samosa / Poha + Mint Chutney + Hot Masala Chai", "4:30 PM - 6:00 PM", "3:30 PM", True, "TK-SNK-204"),
+            ("dinner", "Paneer Butter Masala + Roti + Dal Tadka", "7:30 PM - 9:30 PM", "5:30 PM", False, None)
+        ]
+
+        if not schedules:
+            hid = hostel.id if hostel else "h-hostel-a"
+            for sess_key, menu_str, time_str, deadline_str, default_booked, default_token in default_sessions:
+                sch = MealSchedule(
+                    id=f"sched-{sess_key}-{today.isoformat()}-{random.randint(10, 99)}",
+                    hostel_id=hid,
+                    date=today,
+                    session=sess_key,
+                    menu=menu_str,
+                    time_window=time_str
+                )
+                db.add(sch)
+                schedules.append(sch)
+            await db.commit()
+
         default_deadlines = {
             "breakfast": "6:30 AM",
             "lunch": "10:30 AM",
+            "snacks": "3:30 PM",
             "dinner": "5:30 PM"
         }
 
         meals_dict = {}
-        if schedules:
-            for sch in schedules:
-                sess_key = sch.session.lower()
-                b = bookings_map.get(sess_key)
-                is_booked = (b.status == "Booked") if b else True
-                token_val = b.token if (b and is_booked) else (f"TK-{sess_key[:3].upper()}-{random.randint(100, 999)}" if is_booked else None)
+        ordered_keys = ["breakfast", "lunch", "snacks", "dinner"]
+        for sch in schedules:
+            if sch.session.lower() not in ordered_keys:
+                ordered_keys.append(sch.session.lower())
 
-                meals_dict[sess_key] = MealItemOut(
-                    session=sch.session,
-                    menu=sch.menu,
-                    time=sch.time_window,
-                    booked=is_booked,
-                    status="Booked" if is_booked else "Not Booked",
-                    deadline=default_deadlines.get(sess_key, "10:30 AM"),
-                    can_modify=True,
-                    token=token_val
-                )
-        else:
-            defaults = [
-                ("breakfast", "Poha + Boiled Eggs / Banana + Milk", "7:00 AM - 9:00 AM", True, "TK-BKF-892", "6:30 AM"),
-                ("lunch", "Rajma + Jeera Rice + Roti + Salad", "12:00 PM - 2:00 PM", True, "TK-LCH-419", "10:30 AM"),
-                ("dinner", "Paneer Butter Masala + Roti + Dal", "7:00 PM - 9:00 PM", False, None, "5:30 PM")
-            ]
-            for sess_key, menu_str, time_str, default_booked, default_token, deadline_str in defaults:
-                b = bookings_map.get(sess_key)
-                is_booked = (b.status == "Booked") if b else default_booked
-                token_val = b.token if (b and is_booked) else (default_token if is_booked else None)
+        for sess_key in ordered_keys:
+            sch = next((s for s in schedules if s.session.lower() == sess_key), None)
+            b = bookings_map.get(sess_key)
+            is_booked = (b.status == "Booked") if b else (sess_key != "dinner")
+            token_val = b.token if (b and is_booked) else (f"TK-{sess_key[:3].upper()}-{random.randint(100, 999)}" if is_booked else None)
+            sess_addons = stock_engine.get_active_menu_addons(sess_key)
 
-                meals_dict[sess_key] = MealItemOut(
-                    session=sess_key.capitalize(),
-                    menu=menu_str,
-                    time=time_str,
-                    booked=is_booked,
-                    status="Booked" if is_booked else "Not Booked",
-                    deadline=deadline_str,
-                    can_modify=True,
-                    token=token_val
-                )
+            menu_val = sch.menu if sch else "Special Dining Dish"
+            time_val = sch.time_window if sch else "Regular Hours"
+
+            meals_dict[sess_key] = MealItemOut(
+                session=sess_key.capitalize(),
+                menu=menu_val,
+                time=time_val,
+                booked=is_booked,
+                status="Booked" if is_booked else "Not Booked",
+                deadline=default_deadlines.get(sess_key, "10:30 AM"),
+                can_modify=True,
+                token=token_val,
+                addons=sess_addons
+            )
 
         return TodayMealsResponse(
             date=today.strftime("%a, %d %b %Y"),
@@ -139,9 +153,11 @@ class StudentService:
             if now_booked:
                 student_profile.meals_booked += 1
                 student_profile.co2_avoided_kg = round(student_profile.co2_avoided_kg + 0.3, 1)
+                student_profile.eco_points = (student_profile.eco_points or 580) + 10
             else:
                 student_profile.meals_saved += 1
                 student_profile.co2_avoided_kg = round(student_profile.co2_avoided_kg + 0.5, 1)
+                student_profile.eco_points = (student_profile.eco_points or 580) + 30
 
         await db.commit()
         await db.refresh(booking)
@@ -212,7 +228,9 @@ class StudentService:
         return BookingHistoryResponse(total=len(history_items), items=history_items)
 
     async def get_student_impact(self, db: AsyncSession, student_id: str) -> StudentImpactResponse:
-        stmt = select(StudentProfile).where(StudentProfile.id == student_id)
+        stmt = select(StudentProfile).where(
+            (StudentProfile.id == student_id) | (StudentProfile.user_id == student_id)
+        )
         res = await db.execute(stmt)
         profile = res.scalar_one_or_none()
 
@@ -221,7 +239,8 @@ class StudentService:
         booked = profile.meals_booked if profile else 82
         saved = profile.meals_saved if profile else 14
         co2 = profile.co2_avoided_kg if profile else 24.0
-        rank_val = profile.rank if profile else 12
+        points_val = profile.eco_points if profile and profile.eco_points else 580
+        rank_val = profile.rank if profile else 5
 
         return StudentImpactResponse(
             student_name=name,
@@ -231,8 +250,235 @@ class StudentService:
             timely_cancellations=saved,
             estimated_surplus_avoided_kg=round(float(saved) * 0.42, 1),
             co2_avoided_kg=co2,
+            eco_points=points_val,
             eco_rank=rank_val,
             sustainability_streak_days=18
+        )
+
+    async def get_leaderboard(self, db: AsyncSession, student_id: str = "usr-student-01") -> StudentLeaderboardResponse:
+        stmt = select(StudentProfile).where(
+            (StudentProfile.id == student_id) | (StudentProfile.user_id == student_id)
+        )
+        res = await db.execute(stmt)
+        profile = res.scalar_one_or_none()
+
+        cur_points = profile.eco_points if profile and profile.eco_points else 580
+        cur_name = profile.name if profile else "Nitin Sharma"
+        cur_hostel = "Hostel A (Aryabhatta)"
+        cur_room = profile.room if profile and profile.room else "B-304"
+        cur_roll = profile.roll_no if profile and profile.roll_no else "2022CSB042"
+        cur_meals_saved = profile.meals_saved if profile and profile.meals_saved else 14
+        cur_co2 = profile.co2_avoided_kg if profile and profile.co2_avoided_kg else 24.0
+
+        campus_peers = [
+            {
+                "id": "st-aarav-01",
+                "name": "Aarav Patel",
+                "avatar": "🥇",
+                "roll_no": "2022CSB019",
+                "hostel": "Hostel B (Ramanujan)",
+                "room": "A-108",
+                "eco_points": 940,
+                "meals_saved": 31,
+                "co2_avoided_kg": 48.5,
+                "streak_days": 28,
+                "tier": "Eco Legend",
+            },
+            {
+                "id": "st-priya-02",
+                "name": "Priya Sharma",
+                "avatar": "🥈",
+                "roll_no": "2023EEB054",
+                "hostel": "Hostel C (Gargi)",
+                "room": "C-212",
+                "eco_points": 875,
+                "meals_saved": 28,
+                "co2_avoided_kg": 42.1,
+                "streak_days": 24,
+                "tier": "Green Champion",
+            },
+            {
+                "id": "st-rohan-03",
+                "name": "Rohan Sengupta",
+                "avatar": "🥉",
+                "roll_no": "2022MEB088",
+                "hostel": "Hostel A (Aryabhatta)",
+                "room": "B-114",
+                "eco_points": 790,
+                "meals_saved": 25,
+                "co2_avoided_kg": 38.0,
+                "streak_days": 21,
+                "tier": "Green Champion",
+            },
+            {
+                "id": "st-ananya-04",
+                "name": "Ananya Iyer",
+                "avatar": "⭐",
+                "roll_no": "2023CSB112",
+                "hostel": "Hostel C (Gargi)",
+                "room": "D-305",
+                "eco_points": 710,
+                "meals_saved": 22,
+                "co2_avoided_kg": 33.2,
+                "streak_days": 19,
+                "tier": "Sustainability Hero",
+            },
+            {
+                "id": "st-siddharth-05",
+                "name": "Siddharth Rao",
+                "avatar": "🌱",
+                "roll_no": "2022CHB031",
+                "hostel": "Hostel A (Aryabhatta)",
+                "room": "B-402",
+                "eco_points": 540,
+                "meals_saved": 16,
+                "co2_avoided_kg": 25.4,
+                "streak_days": 14,
+                "tier": "Sustainability Hero",
+            },
+            {
+                "id": "st-divya-06",
+                "name": "Divya Nair",
+                "avatar": "🌿",
+                "roll_no": "2024CSB009",
+                "hostel": "Hostel B (Ramanujan)",
+                "room": "A-321",
+                "eco_points": 490,
+                "meals_saved": 15,
+                "co2_avoided_kg": 22.8,
+                "streak_days": 12,
+                "tier": "Eco Warrior",
+            },
+            {
+                "id": "st-kabir-07",
+                "name": "Kabir Joshi",
+                "avatar": "🍃",
+                "roll_no": "2023CEB077",
+                "hostel": "Hostel D (Kalam)",
+                "room": "E-101",
+                "eco_points": 430,
+                "meals_saved": 13,
+                "co2_avoided_kg": 19.5,
+                "streak_days": 10,
+                "tier": "Eco Warrior",
+            },
+            {
+                "id": "st-sneha-08",
+                "name": "Sneha Kulkarni",
+                "avatar": "🌾",
+                "roll_no": "2024EEB043",
+                "hostel": "Hostel C (Gargi)",
+                "room": "C-118",
+                "eco_points": 380,
+                "meals_saved": 11,
+                "co2_avoided_kg": 16.2,
+                "streak_days": 8,
+                "tier": "Sprout",
+            },
+            {
+                "id": "st-vikram-09",
+                "name": "Vikram Malhotra",
+                "avatar": "🍀",
+                "roll_no": "2022MEB015",
+                "hostel": "Hostel B (Ramanujan)",
+                "room": "A-205",
+                "eco_points": 320,
+                "meals_saved": 9,
+                "co2_avoided_kg": 13.8,
+                "streak_days": 7,
+                "tier": "Sprout",
+            },
+        ]
+
+        def get_tier(pts: int) -> str:
+            if pts >= 850:
+                return "Eco Legend"
+            if pts >= 700:
+                return "Green Champion"
+            if pts >= 500:
+                return "Sustainability Hero"
+            if pts >= 400:
+                return "Eco Warrior"
+            return "Sprout"
+
+        cur_tier = get_tier(cur_points)
+
+        all_entries = [
+            {
+                "id": student_id,
+                "name": cur_name,
+                "avatar": "👨‍🎓",
+                "roll_no": cur_roll,
+                "hostel": cur_hostel,
+                "room": cur_room,
+                "eco_points": cur_points,
+                "meals_saved": cur_meals_saved,
+                "co2_avoided_kg": cur_co2,
+                "streak_days": 18,
+                "tier": cur_tier,
+                "is_current_user": True,
+            }
+        ]
+        for peer in campus_peers:
+            peer_copy = dict(peer)
+            peer_copy["is_current_user"] = False
+            all_entries.append(peer_copy)
+
+        # Sort descending by eco_points
+        all_entries.sort(key=lambda x: x["eco_points"], reverse=True)
+
+        leaderboard_items: List[StudentLeaderboardEntry] = []
+        current_rank = 1
+        current_idx = 0
+        for idx, entry in enumerate(all_entries):
+            r = idx + 1
+            if r == 1:
+                badge = "🥇 1st Gold"
+            elif r == 2:
+                badge = "🥈 2nd Silver"
+            elif r == 3:
+                badge = "🥉 3rd Bronze"
+            elif r <= 5:
+                badge = "⭐ Top 5"
+            else:
+                badge = "🌿 Top 10"
+
+            item = StudentLeaderboardEntry(
+                rank=r,
+                id=entry["id"],
+                name=entry["name"],
+                avatar=entry["avatar"],
+                roll_no=entry["roll_no"],
+                hostel=entry["hostel"],
+                room=entry.get("room"),
+                eco_points=entry["eco_points"],
+                meals_saved=entry["meals_saved"],
+                co2_avoided_kg=entry["co2_avoided_kg"],
+                streak_days=entry["streak_days"],
+                tier=entry["tier"],
+                badge=badge,
+                is_current_user=entry["is_current_user"]
+            )
+            leaderboard_items.append(item)
+            if entry["is_current_user"]:
+                current_rank = r
+                current_idx = idx
+
+        points_to_next = 0
+        if current_idx > 0:
+            points_to_next = leaderboard_items[current_idx - 1].eco_points - cur_points + 1
+
+        if profile and profile.rank != current_rank:
+            profile.rank = current_rank
+            await db.commit()
+
+        return StudentLeaderboardResponse(
+            current_student_rank=current_rank,
+            current_student_points=cur_points,
+            current_student_tier=cur_tier,
+            points_to_next_rank=max(0, points_to_next),
+            total_participants=len(leaderboard_items),
+            leaderboard=leaderboard_items
         )
 
 

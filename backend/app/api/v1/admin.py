@@ -19,7 +19,9 @@ from app.schemas.admin import (
     SurplusPublishRequest,
     SurplusPublishResponse,
     HandoverVerifyRequest,
-    HandoverVerifyResponse
+    HandoverVerifyResponse,
+    MenuUpdateRequest,
+    AdminMenuResponse
 )
 from app.schemas.ml import ForecastPredictRequest, ForecastPredictResponse
 
@@ -106,3 +108,19 @@ async def approve_surplus_request(
         req.status = "Approved"
         await db.commit()
     return {"message": "Request approved successfully", "request_id": request_id, "status": "Approved"}
+
+
+@router.get("/menu", response_model=AdminMenuResponse)
+async def get_daily_menu(
+    db: AsyncSession = Depends(get_db)
+):
+    return await admin_service.get_daily_menu(db=db)
+
+
+@router.post("/menu", response_model=AdminMenuResponse)
+@router.post("/menu/push", response_model=AdminMenuResponse)
+async def update_daily_menu(
+    req: MenuUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    return await admin_service.update_daily_menu(db=db, req=req)

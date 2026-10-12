@@ -55,6 +55,13 @@ const UnifiedLoginModal = ({ isOpen, onClose }) => {
       else if (role === 'ngo') credentials = ngoForm;
 
       await handleLogin(role, credentials);
+      if (role === 'student') {
+        window.location.href = 'http://localhost:3001';
+      } else if (role === 'admin') {
+        window.location.href = 'http://localhost:3002';
+      } else if (role === 'ngo') {
+        window.location.href = 'http://localhost:3003';
+      }
       onClose();
     } catch (err) {
       const msg = err?.response?.data?.detail || err?.detail || err?.message || 'Authentication failed. Please verify your credentials.';

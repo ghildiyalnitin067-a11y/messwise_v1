@@ -54,6 +54,43 @@ class WhatIfSimulateResponse(BaseModel):
     recommendation: str
 
 
+class MetricMeasurementItem(BaseModel):
+    name: str
+    value: str
+    status: str  # Measured, Estimated, Unavailable
+    detail: str
+
+
+class MLPerformanceSustainabilityOut(BaseModel):
+    model_name: str
+    algorithm: str
+    ml_framework: str
+    model_status: str
+    input_features: List[str]
+    predicted_outputs: List[str]
+    mae: float
+    rmse: float
+    r2_score: float
+    mean_accuracy_pct: float
+    latency_avg_ms: float
+    latency_p95_ms: float
+    latency_p99_ms: float
+    iterations_measured: int
+    model_size_bytes: int
+    memory_rss_mb: float
+    cpu_cores: int
+    cpu_utilization_pct: float
+    gpu_utilization: str
+    energy_per_prediction_wh: float
+    energy_per_1000_predictions_kwh: float
+    carbon_intensity_gco2e_per_kwh: float
+    carbon_intensity_source: str
+    operational_carbon_per_1000_gco2e: float
+    daily_projections: Dict[str, Any]
+    monthly_projections: Dict[str, Any]
+    status_summary: List[MetricMeasurementItem]
+
+
 class AccuracyRecordOut(BaseModel):
     date: str
     meal_session: str
@@ -69,3 +106,4 @@ class ForecastAccuracyResponse(BaseModel):
     mean_accuracy_pct: float
     total_evaluations: int
     history: List[AccuracyRecordOut]
+    ml_telemetry: Optional[MLPerformanceSustainabilityOut] = None

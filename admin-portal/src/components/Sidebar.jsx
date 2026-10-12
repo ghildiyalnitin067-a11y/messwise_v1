@@ -5,7 +5,13 @@ import {
   TrendingUp, 
   Sparkles, 
   ShieldCheck, 
-  LogOut 
+  LogOut,
+  Boxes,
+  Trophy,
+  Utensils,
+  Droplets,
+  ThumbsUp,
+  BarChart3
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
@@ -36,6 +42,39 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         </button>
 
         <button
+          className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => onTabChange('analytics')}
+        >
+          <div className="nav-label">
+            <BarChart3 size={16} />
+            <span>Analytics & Sustainability</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Intelligence</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'preferences' ? 'active' : ''}`}
+          onClick={() => onTabChange('preferences')}
+        >
+          <div className="nav-label">
+            <ThumbsUp size={16} />
+            <span>Student Preferences</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 800 }}>Zero-Waste</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'menu' ? 'active' : ''}`}
+          onClick={() => onTabChange('menu')}
+        >
+          <div className="nav-label">
+            <Utensils size={16} />
+            <span>Daily Menu Operations</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Live Sync</span>
+        </button>
+
+        <button
           className={`nav-item ${activeTab === 'production' ? 'active' : ''}`}
           onClick={() => onTabChange('production')}
         >
@@ -43,6 +82,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <ChefHat size={16} />
             <span>Batch Production</span>
           </div>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'stock' ? 'active' : ''}`}
+          onClick={() => onTabChange('stock')}
+        >
+          <div className="nav-label">
+            <Boxes size={16} />
+            <span>Stock Health</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#fef3c7', color: '#92400e' }}>FIFO</span>
         </button>
 
         <button
@@ -54,6 +104,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <span>Demand Forecast</span>
           </div>
           <span className="nav-badge">94%</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'uco' ? 'active' : ''}`}
+          onClick={() => onTabChange('uco')}
+        >
+          <div className="nav-label">
+            <Droplets size={16} />
+            <span>Used Cooking Oil</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Eco Net</span>
         </button>
 
         <div className="nav-section-title" style={{ marginTop: '0.5rem' }}>Redistribution</div>
@@ -77,28 +138,22 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <span>Handover Verification</span>
           </div>
         </button>
+
+        <div className="nav-section-title" style={{ marginTop: '0.5rem' }}>Campus Engagement</div>
+
+        <button
+          className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`}
+          onClick={() => onTabChange('leaderboard')}
+        >
+          <div className="nav-label">
+            <Trophy size={16} />
+            <span>Student Eco Leaders</span>
+          </div>
+          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Eco Pts</span>
+        </button>
       </div>
 
       <div className="sidebar-footer">
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0 0.5rem' }}>
-          Switch Workspaces
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <a
-            href="http://localhost:3001"
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            Student
-          </a>
-          <a
-            href="http://localhost:3003"
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'center' }}
-          >
-            NGO
-          </a>
-        </div>
 
         <div className="user-mini-card">
           <div className="user-mini-info">

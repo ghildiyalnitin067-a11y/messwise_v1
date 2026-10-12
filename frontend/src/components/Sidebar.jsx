@@ -14,7 +14,10 @@ import {
   Sparkles,
   Layers,
   User,
-  History
+  History,
+  Trophy,
+  Droplets,
+  ThumbsUp
 } from 'lucide-react';
 import { authApi } from '../api/client';
 
@@ -23,21 +26,27 @@ const Sidebar = ({ role = 'student', activeTab, onTabChange }) => {
 
   const studentMain = [
     { id: 'dashboard', label: 'RSVP & Today\'s Meals', icon: LayoutDashboard },
+    { id: 'preferences', label: 'Meal Preferences', icon: ThumbsUp, badge: '+15 Pts' },
     { id: 'menu', label: 'Weekly Dining Menu', icon: Utensils },
     { id: 'history', label: 'Booking Passes', icon: CalendarCheck },
   ];
   const studentSecondary = [
-    { id: 'impact', label: 'Eco Impact & Ranking', icon: Award, badge: '#12' },
+    { id: 'leaderboard', label: 'Eco Leaderboard', icon: Trophy, badge: '🔥 Top 5' },
+    { id: 'impact', label: 'Eco Impact & Ranking', icon: Award },
   ];
 
   const adminMain = [
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
+    { id: 'preferences', label: 'Student Preferences', icon: ThumbsUp, badge: 'Zero-Waste' },
+    { id: 'menu', label: 'Daily Menu Operations', icon: Utensils, badge: 'Live Sync' },
     { id: 'production', label: 'Batch Production Logs', icon: ChefHat },
     { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp, badge: '94%' },
+    { id: 'uco', label: 'Used Cooking Oil', icon: Droplets, badge: 'Eco Net' },
   ];
   const adminSecondary = [
     { id: 'surplus', label: 'Surplus Food Queue', icon: Sparkles },
     { id: 'handovers', label: 'OTP Verification', icon: ShieldCheck },
+    { id: 'leaderboard', label: 'Student Eco Leaders', icon: Trophy },
   ];
 
   const ngoMain = [
