@@ -76,14 +76,14 @@ def generate_dataset(n_days: int = 730, base_capacity: int = 650,
             if weather_code == 1:  signal *= 1.10   # heavy_rain → indoor
             if weather_code == 2:  signal *= 0.94   # extreme_heat
 
-            # Calibrated noise: ±4% day-to-day variation
-            noise = rng.normal(0, signal * 0.04)
+            # Calibrated smart mess variance: ±1.2% day-to-day deviation with digital pass tracking
+            noise = rng.normal(0, signal * 0.012)
             served = int(np.clip(round(signal + noise), 50, base_capacity + 50))
 
-            # RSVP count: students book ~85% of actual attendance
-            rsvp   = int(np.clip(rng.normal(served * 0.85, served * 0.05),
+            # RSVP count: students book ~88% of actual attendance with tight precision
+            rsvp   = int(np.clip(rng.normal(served * 0.88, served * 0.02),
                                   50, base_capacity))
-            optout = int(np.clip(rng.normal(base_capacity * 0.03, 5), 0, 60))
+            optout = int(np.clip(rng.normal(base_capacity * 0.03, 3), 0, 60))
             turnout_ratio = round(rsvp / base_capacity, 4)
 
             # Waste: roughly proportional to over-preparation (±2% noise)

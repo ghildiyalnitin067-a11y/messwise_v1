@@ -3,9 +3,10 @@ services:
   - type: web
     name: messwise-api
     runtime: python
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     rootDir: backend
+    healthCheckPath: /api/v1/health
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -14,13 +15,13 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:///./messwise.db
+        value: sqlite+aiosqlite:///./messwise.db
       - key: BACKEND_CORS_ORIGINS
         value: '["*"]'
       - key: AUTO_SEED_DATA
         value: "true"
 
-  # Frontend Static Site
+  # Unified Frontend & Portal Hub
   - type: web
     name: messwise-portal
     runtime: static

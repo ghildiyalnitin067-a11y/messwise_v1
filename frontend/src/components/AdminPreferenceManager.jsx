@@ -13,10 +13,17 @@ import {
   Scissors,
   Check,
   ChevronRight,
-  Sliders
+  Sliders,
+  Sun,
+  Moon
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { preferenceApi } from '../api/client';
+
+const safeConfetti = (opts) => {
+  if (typeof window !== 'undefined' && typeof window.confetti === 'function') {
+    window.confetti(opts);
+  }
+};
 
 const AdminPreferenceManager = ({ onMenuOptimized }) => {
   const [activeSession, setActiveSession] = useState('lunch');
@@ -54,7 +61,7 @@ const AdminPreferenceManager = ({ onMenuOptimized }) => {
       });
 
       if (res?.success) {
-        confetti({
+        safeConfetti({
           particleCount: 60,
           spread: 70,
           origin: { y: 0.6 },
@@ -139,8 +146,8 @@ const AdminPreferenceManager = ({ onMenuOptimized }) => {
         {/* Session Toggle */}
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           {[
-            { id: 'lunch', label: 'Lunch', icon: '☀️' },
-            { id: 'dinner', label: 'Dinner', icon: '🌙' },
+            { id: 'lunch', label: 'Lunch', Icon: Sun },
+            { id: 'dinner', label: 'Dinner', Icon: Moon },
           ].map((sess) => (
             <button
               key={sess.id}
@@ -161,7 +168,7 @@ const AdminPreferenceManager = ({ onMenuOptimized }) => {
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>{sess.icon}</span>
+              <sess.Icon size={14} />
               <span>{sess.label}</span>
             </button>
           ))}

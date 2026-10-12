@@ -35,11 +35,13 @@ import GreenRouteTracker from './components/GreenRouteTracker';
 import { adminApi, authApi, stockApi } from './api/client';
 
 export const INITIAL_PRODUCTION_LOGS = [
-  { id: 'log-1', date: 'Today (Lunch)', menu: 'Rajma + Steamed Rice + Roti', p: 842, s: 817, sur: 25, w: 6.0, prepared: 842, served: 817, surplus: 25, waste: 6.0, status: 'Active Log', isSurplus: false },
-  { id: 'log-2', date: 'Today (Breakfast)', menu: 'Poha + Milk + Banana', p: 480, s: 472, sur: 8, w: 2.2, prepared: 480, served: 472, surplus: 8, waste: 2.2, status: 'Completed', isSurplus: false },
-  { id: 'log-3', date: 'Yesterday (Dinner)', menu: 'Dal Tadka + Roti + Rice', p: 610, s: 598, sur: 12, w: 4.8, prepared: 610, served: 598, surplus: 12, waste: 4.8, status: 'Completed', isSurplus: false },
-  { id: 'log-4', date: 'Yesterday (Lunch)', menu: 'Chole Bhature + Rice', p: 820, s: 795, sur: 25, w: 7.4, prepared: 820, served: 795, surplus: 25, waste: 7.4, status: 'Completed', isSurplus: false },
-  { id: 'log-5', date: '14 Sep (Dinner)', menu: 'Veg Pulao + Kadhi', p: 580, s: 565, sur: 15, w: 3.9, prepared: 580, served: 565, surplus: 15, waste: 3.9, status: 'Completed', isSurplus: false },
+  { id: 'log-1', date: 'Today (Lunch)', menu: 'Rajma Masala + Steamed Rice + Tawa Roti + Boondi Raita', p: 842, s: 817, sur: 25, w: 5.8, prepared: 842, served: 817, surplus: 25, waste: 5.8, status: 'Active Log', isSurplus: false },
+  { id: 'log-2', date: 'Today (Breakfast)', menu: 'Indori Poha + Roasted Peanuts + Hot Milk + Banana', p: 480, s: 468, sur: 12, w: 2.1, prepared: 480, served: 468, surplus: 12, waste: 2.1, status: 'Completed', isSurplus: false },
+  { id: 'log-3', date: 'Yesterday (Dinner)', menu: 'Shahi Paneer + Dal Makhani + Tawa Roti + Jeera Rice', p: 760, s: 742, sur: 18, w: 4.2, prepared: 760, served: 742, surplus: 18, waste: 4.2, status: 'Completed', isSurplus: false },
+  { id: 'log-4', date: 'Yesterday (Lunch)', menu: 'Kadhi Pakoda + Steamed Rice + Aloo Jeera + Salad', p: 810, s: 790, sur: 20, w: 6.1, prepared: 810, served: 790, surplus: 20, waste: 6.1, status: 'Completed', isSurplus: false },
+  { id: 'log-5', date: 'Sunday (Special Feast)', menu: 'Chole Bhature + Veg Pulao + Gulab Jamun', p: 940, s: 934, sur: 6, w: 3.8, prepared: 940, served: 934, surplus: 6, waste: 3.8, status: 'Completed', isSurplus: false },
+  { id: 'log-6', date: 'Friday (Weekend Exodus)', menu: 'Moong Dal Khichdi + Papad + Mixed Pickle + Dahi', p: 460, s: 385, sur: 75, w: 8.5, prepared: 460, served: 385, surplus: 75, waste: 8.5, status: 'Completed', isSurplus: false },
+  { id: 'log-7', date: 'Exam Night (Mid-Sem Snacks)', menu: 'Aloo Paratha + Curd + Adrak Chai (11:30 PM)', p: 320, s: 318, sur: 2, w: 1.1, prepared: 320, served: 318, surplus: 2, waste: 1.1, status: 'Completed', isSurplus: false },
 ];
 
 function App() {
@@ -176,7 +178,7 @@ function App() {
         eco_points: rec.eco_points || 25
       };
       await stockApi.publishAddon(payload);
-      setStockActionMsg(`🌱 Successfully pushed "${rec.recommended_dish_name}" to Student Menu for ${session.toUpperCase()}! Students can now claim add-ons.`);
+      setStockActionMsg(`Successfully pushed "${rec.recommended_dish_name}" to Student Menu for ${session.toUpperCase()}! Students can now claim add-ons.`);
       await loadStockData();
     } catch {
       setStockActionMsg(`Failed to publish add-on special.`);
@@ -216,7 +218,7 @@ function App() {
       };
       setNgoRequests((prev) => [newNgoReq, ...prev]);
 
-      setStockActionMsg(`🤝 Dispatched "${rec.recommended_dish_name}" (${rec.potential_portions} meals) to NGO Food Rescue Feed! Handover OTP: ${newNgoReq.otp}`);
+      setStockActionMsg(`Dispatched "${rec.recommended_dish_name}" (${rec.potential_portions} meals) to NGO Food Rescue Feed! Handover OTP: ${newNgoReq.otp}`);
     } catch (e) {
       console.error(e);
       setStockActionMsg('Failed to broadcast to NGO network.');
@@ -731,8 +733,8 @@ function App() {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Prepared Batch</div>
-                  <div className="kpi-value">{adminStats.today_stats.prepared}</div>
-                  <div className="kpi-meta">Lunch cycle total</div>
+                  <div className="kpi-value">{adminStats.today_stats.prepared} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Thalis</span></div>
+                  <div className="kpi-meta">Lunch cycle (~353 kg food total)</div>
                 </div>
                 <div className="kpi-icon brand">
                   <ChefHat size={18} />
@@ -742,8 +744,8 @@ function App() {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Meals Served</div>
-                  <div className="kpi-value">{adminStats.today_stats.served}</div>
-                  <div className="kpi-meta">Student turnout verified</div>
+                  <div className="kpi-value">{adminStats.today_stats.served} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Thalis</span></div>
+                  <div className="kpi-meta">Student turnout (~343 kg eaten)</div>
                 </div>
                 <div className="kpi-icon brand">
                   <Check size={18} />
@@ -753,8 +755,8 @@ function App() {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Available Surplus</div>
-                  <div className="kpi-value">{adminStats.today_stats.surplus}</div>
-                  <div className="kpi-meta">Portions for food rescue</div>
+                  <div className="kpi-value">{adminStats.today_stats.surplus} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Thalis</span></div>
+                  <div className="kpi-meta">Rescue batch (~10.5 kg to NGO)</div>
                 </div>
                 <div className="kpi-icon warm">
                   <Sparkles size={18} />
@@ -765,7 +767,7 @@ function App() {
                 <div>
                   <div className="kpi-label">Plate Waste</div>
                   <div className="kpi-value">{adminStats.today_stats.waste} kg</div>
-                  <div className="kpi-meta">0.7% preparation ratio</div>
+                  <div className="kpi-meta">0.7% prep ratio (Safe limit &lt;15 kg)</div>
                 </div>
                 <div className="kpi-icon">
                   <Trash2 size={18} />
@@ -922,27 +924,6 @@ function App() {
                 </form>
               </div>
             </div>
-
-            {/* GreenRoute Quick-Commerce Dispatch & Rider Telemetry */}
-            <GreenRouteTracker 
-              ngoRequests={ngoRequests}
-              onHandoverSuccess={(disp) => {
-                setAdminStats((prev) => ({
-                  ...prev,
-                  today_stats: {
-                    ...prev.today_stats,
-                    surplus: Math.max(0, prev.today_stats.surplus - disp.portions),
-                  }
-                }));
-                setNgoRequests((prev) =>
-                  prev.map((r) =>
-                    (r.surplus_id === disp.surplusId || r.id === disp.id || r.otp === disp.otp)
-                      ? { ...r, status: 'Collected' }
-                      : r
-                  )
-                );
-              }}
-            />
 
             {/* Active NGO Handover Verification Queue */}
             <div className="panel">
@@ -1357,10 +1338,10 @@ function App() {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem' }}>
                               {[
-                                { id: 'breakfast', label: '🌅 Brkfast' },
-                                { id: 'lunch', label: '☀️ Lunch' },
-                                { id: 'snacks', label: '☕ Snacks' },
-                                { id: 'dinner', label: '🌙 Dinner' },
+                                { id: 'breakfast', label: 'Brkfast' },
+                                { id: 'lunch', label: 'Lunch' },
+                                { id: 'snacks', label: 'Snacks' },
+                                { id: 'dinner', label: 'Dinner' },
                               ].map((sess) => {
                                 const isThisPublishing = publishingAddonId === `${rec.ingredient_id}-${sess.id}`;
                                 const isThisActive = activeAddons.some(a => a.ingredient_id === rec.ingredient_id && a.meal_session === sess.id);
@@ -1393,7 +1374,7 @@ function App() {
                                 </>
                               ) : (
                                 <>
-                                  🤝 Broadcast to NGO Food Rescue
+                                  Broadcast to NGO Food Rescue
                                 </>
                               )}
                             </button>
@@ -1914,10 +1895,6 @@ function App() {
           <AnalyticsDashboard />
         )}
 
-        {/* Tab: GreenRoute Fleet Live Tracker */}
-        {activeTab === 'greenroute' && (
-          <GreenRouteTracker />
-        )}
       </main>
 
       <HandoverModal
@@ -2047,7 +2024,7 @@ function App() {
                       cost_per_unit: 35
                     })}
                   >
-                    🥬 Raw Vegetable
+                    Raw Vegetable
                   </button>
                   <button
                     type="button"
@@ -2061,7 +2038,7 @@ function App() {
                       cost_per_unit: 40
                     })}
                   >
-                    🍲 Prepared Meal / Curry
+                    Prepared Meal / Curry
                   </button>
                 </div>
               </div>

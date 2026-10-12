@@ -2,8 +2,11 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import HubLanding from './pages/HubLanding';
 import LoginPage from './pages/LoginPage';
+import StudentPortal from './pages/StudentPortal';
+import AdminPortal from './pages/AdminPortal';
+import NgoPortal from './pages/NgoPortal';
 
-// Secure Origin Redirector - ensures separate client origins & prevents bundle leakage
+// Secure Origin Redirector - used if custom isolated origins are configured via env vars
 const SecureOriginRedirect = ({ targetOrigin, label }) => {
   React.useEffect(() => {
     window.location.href = targetOrigin;
@@ -30,10 +33,10 @@ const SecureOriginRedirect = ({ targetOrigin, label }) => {
         maxWidth: '420px'
       }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
-          Redirecting to Isolated {label}
+          Redirecting to {label}
         </h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.25rem' }}>
-          Connecting to dedicated origin at <code>{targetOrigin}</code> for zero-trust client isolation.
+          Connecting to dedicated origin at <code>{targetOrigin}</code>.
         </p>
         <a 
           href={targetOrigin} 
@@ -56,13 +59,26 @@ const SecureOriginRedirect = ({ targetOrigin, label }) => {
 };
 
 function App() {
+  const studentOrigin = import.meta.env.VITE_STUDENT_PORTAL_URL;
+  const adminOrigin = import.meta.env.VITE_ADMIN_PORTAL_URL;
+  const ngoOrigin = import.meta.env.VITE_NGO_PORTAL_URL;
+
   return (
     <Routes>
       <Route path="/" element={<HubLanding />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/student" element={<SecureOriginRedirect targetOrigin="http://localhost:3001" label="Student Portal" />} />
-      <Route path="/admin" element={<SecureOriginRedirect targetOrigin="http://localhost:3002" label="Mess Admin Portal" />} />
-      <Route path="/ngo" element={<SecureOriginRedirect targetOrigin="http://localhost:3003" label="NGO Food Rescue Portal" />} />
+      <Route 
+        path="/student" 
+        element={studentOrigin ? <SecureOriginRedirect targetOrigin={studentOrigin} label="Student Portal" /> : <StudentPortal />} 
+      />
+      <Route 
+        path="/admin" 
+        element={adminOrigin ? <SecureOriginRedirect targetOrigin={adminOrigin} label="Mess Admin Portal" /> : <AdminPortal />} 
+      />
+      <Route 
+        path="/ngo" 
+        element={ngoOrigin ? <SecureOriginRedirect targetOrigin={ngoOrigin} label="NGO Food Rescue Portal" /> : <NgoPortal />} 
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

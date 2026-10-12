@@ -29,6 +29,10 @@ const ExecutiveOverviewTab = ({ data, loading }) => {
 
   const { kpis, historical_totals, period } = data;
 
+  const periodDays = period?.date_range === '7d' ? 7 : period?.date_range === '90d' ? 90 : 30;
+  const dailyPreparedKg = Math.round((kpis.food_prepared_kg || 0) / periodDays);
+  const dailyWasteKg = Number(((kpis.food_wasted_kg || 0) / periodDays).toFixed(1));
+
   const kpiCards = [
     {
       id: 'students',
@@ -43,7 +47,7 @@ const ExecutiveOverviewTab = ({ data, loading }) => {
       id: 'bookings',
       label: 'Total Meal Bookings',
       value: kpis.total_meal_bookings?.toLocaleString() || '0',
-      meta: `Period: ${period.date_range.toUpperCase()}`,
+      meta: `Period: ${period.date_range.toUpperCase()} Cumulative`,
       icon: Utensils,
       color: '#0369a1',
       bg: '#f0f9ff'
@@ -61,16 +65,16 @@ const ExecutiveOverviewTab = ({ data, loading }) => {
       id: 'predicted_demand',
       label: 'Predicted vs Actual Demand',
       value: `${kpis.predicted_meal_demand?.toLocaleString()} / ${kpis.actual_meal_demand?.toLocaleString()}`,
-      meta: 'Meal portions served',
+      meta: 'Total meal portions across period',
       icon: TrendingUp,
       color: '#7c3aed',
       bg: '#f5f3ff'
     },
     {
       id: 'food_prep_waste',
-      label: 'Food Prepared vs Wasted',
-      value: `${kpis.food_prepared_kg?.toLocaleString()} kg / ${kpis.food_wasted_kg} kg`,
-      meta: `Consumed: ${kpis.food_consumed_kg?.toLocaleString()} kg`,
+      label: `Food Prepared (${period.date_range.toUpperCase()} Total)`,
+      value: `${kpis.food_prepared_kg?.toLocaleString()} kg (${((kpis.food_prepared_kg || 0) / 1000).toFixed(1)}t)`,
+      meta: `Daily Avg: ~${dailyPreparedKg} kg/day (0.45 Tonnes/day for 650 students) • Waste: ${dailyWasteKg} kg/day`,
       icon: Trash2,
       color: '#b45309',
       bg: '#fffbeb'
@@ -211,22 +215,22 @@ const ExecutiveOverviewTab = ({ data, loading }) => {
             padding: '0.5rem 0'
           }}>
             <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Filtered Period Prepared</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Filtered Period Output ({period?.date_range?.toUpperCase() || '30D'})</div>
               <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {kpis.food_prepared_kg?.toLocaleString()} kg
+                {kpis.food_prepared_kg?.toLocaleString()} kg ({((kpis.food_prepared_kg || 0) / 1000).toFixed(1)}t)
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                Window: {period.start_date} to {period.end_date}
+                Daily Kitchen Rate: ~{dailyPreparedKg} kg/day (Realistic for 650 boarders)
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>All-Time Food Prepared</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>All-Time Food Prepared (Multi-Month)</div>
               <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--brand-900)' }}>
-                {historical_totals.all_time_food_prepared_kg?.toLocaleString()} kg
+                {historical_totals.all_time_food_prepared_kg?.toLocaleString()} kg ({((historical_totals.all_time_food_prepared_kg || 0) / 1000).toFixed(1)}t)
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                Across recorded term operations
+                Across recorded academic term operations
               </div>
             </div>
 

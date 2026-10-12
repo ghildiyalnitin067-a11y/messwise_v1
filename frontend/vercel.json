@@ -1,9 +1,8 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/api/v1/:match*",
-      "destination": "https://messwise-api.onrender.com/api/v1/:match*"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

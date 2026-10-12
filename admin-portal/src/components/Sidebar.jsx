@@ -49,7 +49,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <BarChart3 size={16} />
             <span>Analytics & Sustainability</span>
           </div>
-          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Intelligence</span>
+          <span className="nav-badge">Intelligence</span>
         </button>
 
         <button
@@ -60,7 +60,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <ThumbsUp size={16} />
             <span>Student Preferences</span>
           </div>
-          <span className="nav-badge" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 800 }}>Zero-Waste</span>
+          <span className="nav-badge">Zero-Waste</span>
         </button>
 
         <button
@@ -71,7 +71,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <Utensils size={16} />
             <span>Daily Menu Operations</span>
           </div>
-          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Live Sync</span>
+          <span className="nav-badge">Live Sync</span>
         </button>
 
         <button
@@ -92,7 +92,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <Boxes size={16} />
             <span>Stock Health</span>
           </div>
-          <span className="nav-badge" style={{ background: '#fef3c7', color: '#92400e' }}>FIFO</span>
+          <span className="nav-badge">FIFO</span>
         </button>
 
         <button
@@ -114,7 +114,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <Droplets size={16} />
             <span>Used Cooking Oil</span>
           </div>
-          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Eco Net</span>
+          <span className="nav-badge">Eco Net</span>
         </button>
 
         <div className="nav-section-title" style={{ marginTop: '0.5rem' }}>Redistribution</div>
@@ -127,7 +127,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <Bike size={16} />
             <span>GreenRoute Fleet</span>
           </div>
-          <span className="nav-badge" style={{ background: '#ecfeff', color: '#0891b2', fontWeight: 800 }}>Live Fleet</span>
+          <span className="nav-badge">Live Fleet</span>
         </button>
 
         <button
@@ -160,7 +160,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <Trophy size={16} />
             <span>Student Eco Leaders</span>
           </div>
-          <span className="nav-badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: 800 }}>Eco Pts</span>
+          <span className="nav-badge">Eco Pts</span>
         </button>
       </div>
 

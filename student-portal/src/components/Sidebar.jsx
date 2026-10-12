@@ -45,7 +45,7 @@ const Sidebar = ({ activeTab, onTabChange, studentRank = 5 }) => {
             <ThumbsUp size={16} />
             <span>Meal Preferences</span>
           </div>
-          <span className="nav-badge" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 800 }}>+15 Pts</span>
+          <span className="nav-badge">+15 Pts</span>
         </button>
 
         <button
@@ -78,7 +78,7 @@ const Sidebar = ({ activeTab, onTabChange, studentRank = 5 }) => {
             <Trophy size={16} />
             <span>Eco Leaderboard</span>
           </div>
-          <span className="nav-badge" style={{ background: '#f59e0b', color: '#ffffff', fontWeight: 800 }}>#{studentRank}</span>
+          <span className="nav-badge">#{studentRank}</span>
         </button>
 
         <button

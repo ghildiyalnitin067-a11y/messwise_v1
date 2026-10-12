@@ -108,14 +108,14 @@ const HubLanding = () => {
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <a href="http://localhost:3001" className="btn btn-warm">
-                <Utensils size={15} /> Student Meal RSVPs (Port 3001)
+              <a href={import.meta.env.VITE_STUDENT_PORTAL_URL || '/student'} className="btn btn-warm">
+                <Utensils size={15} /> Student Meal RSVPs
               </a>
-              <a href="http://localhost:3002" className="btn btn-secondary">
-                <ChefHat size={15} /> Mess Operations Hub (Port 3002)
+              <a href={import.meta.env.VITE_ADMIN_PORTAL_URL || '/admin'} className="btn btn-secondary">
+                <ChefHat size={15} /> Mess Operations Hub
               </a>
-              <a href="http://localhost:3003" className="btn btn-secondary">
-                <HeartHandshake size={15} /> NGO Rescue Feed (Port 3003)
+              <a href={import.meta.env.VITE_NGO_PORTAL_URL || '/ngo'} className="btn btn-secondary">
+                <HeartHandshake size={15} /> NGO Rescue Feed
               </a>
             </div>
           </div>
@@ -207,8 +207,8 @@ const HubLanding = () => {
               </ul>
             </div>
             <div className="panel-header" style={{ backgroundColor: 'var(--bg-canvas-subtle)' }}>
-              <a href="http://localhost:3001" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                Enter Student Portal (Port 3001) <ArrowRight size={14} />
+              <a href={import.meta.env.VITE_STUDENT_PORTAL_URL || '/student'} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                Enter Student Portal <ArrowRight size={14} />
               </a>
             </div>
           </div>
@@ -243,8 +243,8 @@ const HubLanding = () => {
               </ul>
             </div>
             <div className="panel-header" style={{ backgroundColor: 'var(--bg-canvas-subtle)' }}>
-              <a href="http://localhost:3002" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                Enter Operations Hub (Port 3002) <ArrowRight size={14} />
+              <a href={import.meta.env.VITE_ADMIN_PORTAL_URL || '/admin'} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                Enter Operations Hub <ArrowRight size={14} />
               </a>
             </div>
           </div>
@@ -279,8 +279,8 @@ const HubLanding = () => {
               </ul>
             </div>
             <div className="panel-header" style={{ backgroundColor: 'var(--bg-canvas-subtle)' }}>
-              <a href="http://localhost:3003" className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                Enter NGO Portal (Port 3003) <ArrowRight size={14} />
+              <a href={import.meta.env.VITE_NGO_PORTAL_URL || '/ngo'} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                Enter NGO Portal <ArrowRight size={14} />
               </a>
             </div>
           </div>

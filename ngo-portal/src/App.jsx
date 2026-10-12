@@ -28,27 +28,39 @@ function App() {
   const [surplusListings, setSurplusListings] = useState([
     {
       id: 'surplus-1',
-      title: 'Rajma Rice',
-      meals: 25,
-      hostel: 'Hostel A',
-      location_detail: 'Hostel A Dining Hall, Counter 2',
-      pickup_deadline: '4:00 PM',
+      title: 'Rajma Masala + Jeera Rice + Tawa Roti',
+      meals: 35,
+      hostel: 'Hostel A (Aryabhatta)',
+      location_detail: 'North Gate Kitchen Dispatch Bay 2',
+      pickup_deadline: '4:00 PM (Consume before 6:30 PM)',
       status: 'Published',
-      temp_celsius: 64,
+      temp_celsius: 67,
       dietary: 'Vegetarian',
       pickup_otp: '7412',
     },
     {
       id: 'surplus-2',
-      title: 'Roti + Dal Makhani',
-      meals: 40,
-      hostel: 'Hostel B',
-      location_detail: 'Hostel B Kitchen Bay, Gate 3',
-      pickup_deadline: '5:00 PM',
+      title: 'Dal Makhani + Tandoori Roti (Insulated Warmer)',
+      meals: 45,
+      hostel: 'Hostel B (Bhaskara)',
+      location_detail: 'Rear Ramp Loading Dock 1',
+      pickup_deadline: '4:45 PM (Consume before 7:15 PM)',
+      status: 'Published',
+      temp_celsius: 65,
+      dietary: 'Vegetarian',
+      pickup_otp: '3829',
+    },
+    {
+      id: 'surplus-3',
+      title: 'Friday Weekend Khichdi + Dahi + Papad (Hostel Exodus Batch)',
+      meals: 75,
+      hostel: 'Hostel A Central Mess',
+      location_detail: 'Main Kitchen Counter 1',
+      pickup_deadline: '9:30 PM (Dinner Batch)',
       status: 'Published',
       temp_celsius: 68,
       dietary: 'Vegetarian',
-      pickup_otp: '3829',
+      pickup_otp: '5192',
     },
   ]);
 
@@ -56,20 +68,32 @@ function App() {
     {
       id: 'req-101',
       surplus_id: 'surplus-1',
-      food_title: 'Rajma Rice',
-      meals: 25,
+      food_title: 'Rajma Masala + Jeera Rice',
+      meals: 35,
       hostel: 'Hostel A',
-      volunteer_name: 'Rakesh Verma',
-      vehicle: 'Electric Van (DL-04-EV-8821)',
+      volunteer_name: 'Rakesh Verma (Driver DL-8821)',
+      vehicle: 'Tata Ace EV (DL-04-EV-8821)',
       status: 'Approved',
-      pickup_time_estimated: '3:15 PM',
+      pickup_time_estimated: 'Within 25 mins',
       otp: '7412',
+    },
+    {
+      id: 'req-102',
+      surplus_id: 'surplus-chapati',
+      food_title: 'Fresh Tawa Chapati & Dal Makhani',
+      meals: 50,
+      hostel: 'Hostel B',
+      volunteer_name: 'Pranav (Blinkit GreenFleet)',
+      vehicle: 'Ather 450X Electric Scooter (DL 3S PR 9021)',
+      status: 'Approved',
+      pickup_time_estimated: 'Within 12 mins',
+      otp: '8294',
     },
   ]);
 
-  const [distBatch, setDistBatch] = useState('Rajma Rice (Hostel A)');
-  const [distPeople, setDistPeople] = useState(25);
-  const [distLocation, setDistLocation] = useState('Community Shelter #4, Sector 12');
+  const [distBatch, setDistBatch] = useState('Rajma Masala + Rice (Hostel A)');
+  const [distPeople, setDistPeople] = useState(65);
+  const [distLocation, setDistLocation] = useState('Rain Basera Night Shelter, Near Old Railway Station Gate 2');
   const [distSuccess, setDistSuccess] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -591,6 +615,49 @@ function App() {
                   </button>
                 </div>
               </form>
+
+              {/* Recent Verified Shelter Distribution Log */}
+              <div style={{ marginTop: '1.75rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ShieldCheck size={16} color="#16a34a" />
+                  <span>Recent Shelter Distribution &amp; Geo-Tag Receipt Audit</span>
+                </div>
+                <div className="table-container">
+                  <table className="saas-table">
+                    <thead>
+                      <tr>
+                        <th>Date &amp; Time</th>
+                        <th>Food Batch</th>
+                        <th>Shelter Destination</th>
+                        <th>Beneficiaries Fed</th>
+                        <th>Temp at Handover</th>
+                        <th>Verification Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { time: 'Today 2:15 PM', batch: 'Rajma Masala + Steamed Rice (Hostel A)', shelter: 'Rain Basera Night Shelter, Gate 2', people: 65, temp: '66.2°C', status: 'Delivered & Signed' },
+                        { time: 'Yesterday 8:45 PM', batch: 'Paneer Makhani + Roti (Hostel B)', shelter: 'Asha Jyoti Bal Ashram, Sector 14', people: 40, temp: '64.8°C', status: 'Delivered & Signed' },
+                        { time: '14 Sep 2:30 PM', batch: 'Chole Bhature (Sunday Feast Batch)', shelter: 'Kalyanpuri Slum Community Kitchen', people: 80, temp: '67.0°C', status: 'Delivered & Signed' },
+                        { time: '13 Sep 9:15 PM', batch: 'Khichdi + Papad (Exodus Batch)', shelter: 'Shanti Vridh Ashram, Civil Lines', people: 30, temp: '65.5°C', status: 'Delivered & Signed' },
+                      ].map((log, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{log.time}</td>
+                          <td style={{ fontWeight: 600 }}>{log.batch}</td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{log.shelter}</td>
+                          <td style={{ fontWeight: 700, color: 'var(--brand-900)' }}>{log.people} Persons</td>
+                          <td style={{ color: '#16a34a', fontWeight: 600 }}>{log.temp}</td>
+                          <td>
+                            <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Check size={11} /> {log.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}

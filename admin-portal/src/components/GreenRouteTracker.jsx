@@ -18,7 +18,8 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  Zap
+  Zap,
+  Leaf
 } from 'lucide-react';
 import { adminApi } from '../api/client';
 
@@ -245,12 +246,26 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
 
   const convertReqToDispatch = (req) => {
     if (!req) return null;
+    const existing = INITIAL_GREENROUTE_DISPATCHES.find(
+      (d) =>
+        (req.surplus_id && d.surplusId === req.surplus_id) ||
+        (req.otp && d.otp === req.otp) ||
+        (req.id && (d.id === req.id || d.surplusId === req.id))
+    );
+
     const plateMatch = (req.vehicle || '').match(/\(([^)]+)\)/);
-    const licensePlate = plateMatch ? plateMatch[1] : 'DL 3S PR 9021';
-    const riderName = req.volunteer_name || 'Assigned Rider';
-    const dispId = req.id?.startsWith('GR-DISP-')
-      ? req.id
-      : `GR-DISP-${(req.id || 'REQ').slice(-6).toUpperCase()}`;
+    const licensePlate = plateMatch ? plateMatch[1] : (existing?.rider?.licensePlate || 'DL 3S PR 9021');
+    const riderName = req.volunteer_name || existing?.rider?.name || 'Assigned Rider';
+    const dispId = existing ? existing.id : (req.id?.startsWith('GR-DISP-') ? req.id : `GR-DISP-${(req.id || 'REQ').replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase()}`);
+
+    if (existing) {
+      return {
+        ...existing,
+        otpVerified: req.status === 'Collected' || existing.otpVerified,
+        status: req.status === 'Collected' ? 'handed_over' : existing.status,
+        etaMinutes: req.status === 'Collected' ? 0 : existing.etaMinutes,
+      };
+    }
 
     return {
       id: dispId,
@@ -370,7 +385,8 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
         const allReqs = [...(Array.isArray(ngoRequests) ? ngoRequests : []), ...(Array.isArray(localReqs) ? localReqs : [])];
         const reqDispatches = allReqs
           .filter(r => r && r.volunteer_name)
-          .map(convertReqToDispatch);
+          .map(convertReqToDispatch)
+          .filter(Boolean);
 
         setDispatches((prev) => {
           const combined = [
@@ -382,8 +398,35 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
           ];
           const map = new Map();
           combined.forEach((raw) => {
-            if (raw && raw.id && !map.has(raw.id)) {
-              map.set(raw.id, normalizeDispatch(raw));
+            if (!raw) return;
+            const norm = normalizeDispatch(raw);
+            if (!norm || !norm.id) return;
+
+            const canonMatch = INITIAL_GREENROUTE_DISPATCHES.find(
+              (d) =>
+                d.id === norm.id ||
+                d.surplusId === (norm.surplusId || norm.surplus_id) ||
+                (norm.otp && d.otp === norm.otp)
+            );
+            const dedupeKey = canonMatch
+              ? canonMatch.id
+              : (norm.surplusId || norm.surplus_id || norm.otp || norm.id);
+
+            if (!map.has(dedupeKey)) {
+              const finalItem = canonMatch ? { ...canonMatch, ...norm, id: canonMatch.id } : norm;
+              map.set(dedupeKey, finalItem);
+            } else {
+              const current = map.get(dedupeKey);
+              if (norm.status === 'handed_over' || norm.otpVerified) {
+                map.set(dedupeKey, {
+                  ...current,
+                  ...norm,
+                  id: current.id,
+                  status: 'handed_over',
+                  otpVerified: true,
+                  etaMinutes: 0
+                });
+              }
             }
           });
           const list = Array.from(map.values());
@@ -391,7 +434,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
             setSelectedId(forceSelectId);
           } else if (list.length > 0) {
             setSelectedId((cur) => {
-              if (!cur || cur === 'GR-DISP-896' || !map.has(cur)) {
+              if (!cur || !list.some(d => d.id === cur)) {
                 return list[0].id;
               }
               return cur;
@@ -625,7 +668,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       case 'Zepto':
         return {
           className: 'platform-badge platform-badge-zepto',
-          text: '🟣 Zepto Express Rescue',
+          text: 'Zepto Express Rescue',
           dotColor: '#9333ea',
           brandColor: '#8023EB',
           textColor: '#FFFFFF'
@@ -633,7 +676,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       case 'Instamart':
         return {
           className: 'platform-badge platform-badge-instamart',
-          text: '🟠 Instamart Quick Rescue',
+          text: 'Instamart Quick Rescue',
           dotColor: '#ea580c',
           brandColor: '#FC8019',
           textColor: '#FFFFFF'
@@ -748,7 +791,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                 />
                 <span className="font-bold">[{disp.platform}]</span>
                 <span className="font-semibold text-emerald-900 bg-emerald-100/90 px-1.5 py-0.5 rounded text-[11px] flex items-center gap-1">
-                  🛵 {disp.rider?.name || 'Rider'}
+                  <Bike size={12} className="text-emerald-700" /> {disp.rider?.name || 'Rider'}
                 </span>
                 <span className="font-mono text-slate-400 text-[11px]">{disp.id}</span>
                 <span className="text-slate-300">•</span>
@@ -997,7 +1040,9 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>Category: {currentDispatch.rider.vehicleCategory}</span>
                       <span style={{ display: 'inline-block', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--border-default)' }} />
-                      <span style={{ color: 'var(--brand-700)', fontWeight: 600 }}>🌱 Zero Emission Fleet</span>
+                      <span style={{ color: 'var(--brand-700)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Leaf size={12} color="#047857" /> Zero Emission Fleet
+                      </span>
                     </div>
                   </div>
 
@@ -1113,7 +1158,9 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                 {currentDispatch.status !== 'handed_over' ? (
                   <div className="gr-sim-box">
                     <div className="gr-sim-header">
-                      <span className="gr-sim-badge">🧪 Quick Gate Simulation / Test Handover</span>
+                      <span className="gr-sim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Zap size={13} color="#f59e0b" /> Quick Gate Simulation / Test Handover
+                      </span>
                       <span style={{ fontSize: '0.72rem', color: '#fef08a' }}>Demo Mode Active</span>
                     </div>
                     <p className="gr-sim-desc">

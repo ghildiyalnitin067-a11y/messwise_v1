@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-10-12T10:21:59.307793Z",
+  "trained_at": "2026-10-12T17:58:25.477067+00:00",
   "n_training_samples": 1533,
   "n_val_samples": 328,
   "n_test_samples": 329,
@@ -23,16 +23,16 @@
     "baseline": {
       "model_name": "Historical Average",
       "val_metrics": {
-        "mae": 26.5723,
-        "rmse": 42.5209,
-        "r2": 0.7719,
-        "mean_accuracy_pct": 93.86
+        "mae": 20.3996,
+        "rmse": 38.7738,
+        "r2": 0.8025,
+        "mean_accuracy_pct": 95.18
       },
       "test_metrics": {
-        "mae": 34.465,
-        "rmse": 51.8132,
-        "r2": 0.6502,
-        "mean_accuracy_pct": 92.32
+        "mae": 27.873,
+        "rmse": 48.3651,
+        "r2": 0.6887,
+        "mean_accuracy_pct": 93.67
       },
       "latency": {
         "avg_ms": 0.01,
@@ -44,46 +44,46 @@
     "random_forest": {
       "model_name": "Random Forest Regressor",
       "val_metrics": {
-        "mae": 16.5555,
-        "rmse": 20.887,
-        "r2": 0.945,
-        "mean_accuracy_pct": 96.57
+        "mae": 6.724,
+        "rmse": 9.4603,
+        "r2": 0.9882,
+        "mean_accuracy_pct": 98.56
       },
       "test_metrics": {
-        "mae": 18.1347,
-        "rmse": 23.6264,
-        "r2": 0.9273,
-        "mean_accuracy_pct": 96.35
+        "mae": 7.4692,
+        "rmse": 10.2531,
+        "r2": 0.986,
+        "mean_accuracy_pct": 98.48
       },
       "latency": {
-        "avg_ms": 33.6645,
-        "p95_ms": 39.9035,
-        "p99_ms": 40.135
+        "avg_ms": 43.2863,
+        "p95_ms": 49.4906,
+        "p99_ms": 60.1408
       },
-      "model_size_kb": 1817,
-      "train_time_s": 0.18
+      "model_size_kb": 1744,
+      "train_time_s": 0.2
     },
     "xgboost": {
       "model_name": "XGBoost Regressor",
       "val_metrics": {
-        "mae": 15.5728,
-        "rmse": 19.4876,
-        "r2": 0.9521,
-        "mean_accuracy_pct": 96.81
+        "mae": 6.2544,
+        "rmse": 8.3725,
+        "r2": 0.9908,
+        "mean_accuracy_pct": 98.71
       },
       "test_metrics": {
-        "mae": 17.8651,
-        "rmse": 24.0805,
-        "r2": 0.9244,
-        "mean_accuracy_pct": 96.42
+        "mae": 7.67,
+        "rmse": 10.6069,
+        "r2": 0.985,
+        "mean_accuracy_pct": 98.45
       },
       "latency": {
-        "avg_ms": 0.5486,
-        "p95_ms": 0.6636,
-        "p99_ms": 1.0499
+        "avg_ms": 0.7109,
+        "p95_ms": 1.0049,
+        "p99_ms": 1.3606
       },
-      "model_size_kb": 307,
-      "train_time_s": 0.3
+      "model_size_kb": 437,
+      "train_time_s": 0.41
     }
   }
 }

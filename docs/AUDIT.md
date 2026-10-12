@@ -1,120 +1,94 @@
-# MessWise Global Page Health Audit & Functionality Stabilization
+# MessWise Enterprise Product Audit & SIH-Ready Architectural Specification
 
-## 1. Executive Summary & Final Status
-* **Final Status:** `STABLE — VERIFIED`
-* **Core Product Loop:** PREDICT → PREVENT → MEASURE → RESCUE → VERIFY → LEARN
-* **Architecture:** Closed-loop campus food management ecosystem with high-density enterprise UX across 4 web apps (Unified Frontend `:5173`, Student Portal `:3001`, Admin Operations Hub `:3002`, NGO Rescue Network `:3003`) powered by an asynchronous FastAPI backend (`:8000`) and SQLAlchemy ORM.
-* **Test Suite:** 32/32 automated pytest test cases passing in `backend/tests/` with 100% green status.
-* **Build Status:** All 4 Vite production builds compile with 0 errors and 0 missing imports.
+> **Smart India Hackathon (SIH) Evaluation Document**  
+> *Campus Food Governance, Demand Forecasting & Closed-Loop Sustainability Platform*
 
 ---
 
-## 2. Routes Audited
+## 1. System Architecture & Core Product Flow
 
-| Portal / Route | Type / Tab | Component / File | Backend APIs Connected | 4 UI States Verified | Health Status |
-|---|---|---|---|---|---|
-| `/` | Public Landing Hub | `HubLanding.jsx` | `GET /api/v1/admin/dashboard/stats`, `GET /api/v1/student/meals/today` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/login` | Authentication Portal | `LoginPage.jsx` | `POST /api/v1/auth/{role}/login`, `GET /api/v1/auth/me` | Loading, Success, Empty, Error | **HEALTHY** (Fixed) |
-| `/student` (Tab: `dashboard`) | Student RSVP & Feedback | `StudentPortal.jsx` | `GET /api/v1/student/meals/today`, `POST /api/v1/student/meals/toggle`, `POST /api/v1/student/feedback` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/student` (Tab: `menu`) | Weekly Dining Schedule | `StudentPortal.jsx` | `GET /api/v1/student/meals/today` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/student` (Tab: `history`) | Digital Token Passes | `StudentPortal.jsx` | `GET /api/v1/student/bookings/history` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/student` (Tab: `impact`) | Campus Eco Rank & Savings | `StudentPortal.jsx` | `GET /api/v1/student/impact` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/admin` (Tab: `dashboard`) | Operations & Live KPIs | `AdminPortal.jsx` | `GET /api/v1/admin/dashboard/stats`, `GET /api/v1/impact/summary` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/admin` (Tab: `production`) | Batch Production Logger | `AdminPortal.jsx` | `POST /api/v1/admin/production/log`, `GET /api/v1/admin/dashboard/stats` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/admin` (Tab: `forecast`) | Calibrated Demand & Simulator| `AdminPortal.jsx` | `POST /api/v1/forecast/predict`, `POST /api/v1/forecast/what-if` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/admin` (Tab: `surplus`) | Surplus Batch Broadcast | `AdminPortal.jsx` | `POST /api/v1/admin/surplus/publish`, `POST /api/v1/admin/waste/log` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/admin` (Tab: `handovers`) | OTP Verification Desk | `AdminPortal.jsx` | `POST /api/v1/admin/handover/verify` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/ngo` (Tab: `dashboard`) | Live Surplus Feed & Claims | `NgoPortal.jsx` | `GET /api/v1/ngo/surplus/available`, `POST /api/v1/ngo/surplus/{id}/request` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/ngo` (Tab: `catalog`) | Campus Dining Bays | `NgoPortal.jsx` | `GET /api/v1/ngo/surplus/available` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/ngo` (Tab: `requests`) | Active Pickups & OTPs | `NgoPortal.jsx` | `GET /api/v1/ngo/requests` | Loading, Success, Empty, Error | **HEALTHY** |
-| `/ngo` (Tab: `distribution`) | Beneficiary Proof Logger | `NgoPortal.jsx` | `POST /api/v1/ngo/distribution/log` | Loading, Success, Empty, Error | **HEALTHY** |
-| `localhost:3001` | Standalone Student App | `student-portal/src/App.jsx` | Same backend endpoints via proxy | Loading, Success, Empty, Error | **HEALTHY** |
-| `localhost:3002` | Standalone Admin App | `admin-portal/src/App.jsx` | Same backend endpoints via proxy | Loading, Success, Empty, Error | **HEALTHY** |
-| `localhost:3003` | Standalone NGO App | `ngo-portal/src/App.jsx` | Same backend endpoints via proxy | Loading, Success, Empty, Error | **HEALTHY** |
+MessWise implements a complete closed-loop food governance lifecycle:
+$$\text{PREDICT} \longrightarrow \text{PREVENT} \longrightarrow \text{MEASURE} \longrightarrow \text{RESCUE} \longrightarrow \text{VERIFY} \longrightarrow \text{LEARN}$$
 
----
-
-## 3. Healthy Pages
-All user-facing routes have been verified:
-1. **Public Hub (`/`)**: Displays live ecosystem metrics, campus operations summary, and quick login trigger.
-2. **Login View (`/login`)**: Role-tabbed interface with production split-screen layout and credential prefill helpers.
-3. **Student Portal (`/student` & `:3001`)**: All 4 tabs (Dashboard, Menu, Passes, Impact) load, execute real RSVP toggling, submit feedback, and display verified dynamic QR passes.
-4. **Admin Portal (`/admin` & `:3002`)**: All 5 tabs (Dashboard, Production, Forecast, Surplus, Handovers) load, execute real batch logging, What-If simulator predictions, and counter OTP verifications.
-5. **NGO Portal (`/ngo` & `:3003`)**: All 4 tabs (Feed, Catalog, Requests, Distribution) display available food batches, execute 1-click claims with concurrency protection, present driver pickup OTPs, and record verified distribution logs.
-
----
-
-## 4. Problems Found & Root Causes
-
-### Issue 1: Missing Authentication Handlers in Frontend Context
-* **Page / Route:** `/login` & `LoginModal` on `/`
-* **Problem:** Submitting credentials triggered a runtime JavaScript error `TypeError: handleLogin is not a function`.
-* **Root Cause:** `LoginPage.jsx` and `LoginModal.jsx` expected `handleLogin(role, credentials)` and `handleLogout()` from `useMesswise()`, but `MesswiseContext.jsx` only exported a placeholder `login()` method.
-* **Fix:** Implemented full async `handleLogin(role, credentials)` in `MesswiseContext.jsx` connecting to `POST /api/v1/auth/{role}/login`, saving JWT tokens to `localStorage`, fetching current user profile via `/api/v1/auth/me`, and providing clean error feedback.
-
-### Issue 2: CSS Stylesheet Inconsistencies Across Standalone Portals
-* **Page / Route:** Standalone portals (`:3001`, `:3002`, `:3003`)
-* **Problem:** Standalone portal builds had slight stylesheet divergence, causing modal overlays, badges, and responsive tables to risk layout breaks or unstyled containers on certain viewports.
-* **Root Cause:** Dedicated sub-projects (`student-portal`, `admin-portal`, `ngo-portal`) had independent `index.css` files that lacked updated utility classes from the unified root `frontend/src/index.css`.
-* **Fix:** Synchronized CSS stylesheets across all 4 frontend applications with design tokens, glassmorphic modal overlays, responsive table wrappers, and custom scrollbars.
-
-### Issue 3: Potential Blank Screen on Empty API Collections
-* **Page / Route:** `/admin` (Production tab, Handovers tab), `/ngo` (Requests tab, Available Surplus tab)
-* **Problem:** In fresh database environments with 0 records, tables or cards could render as empty blank rectangles without user guidance.
-* **Root Cause:** Direct mapping over empty arrays without an intentional empty-state container.
-* **Fix:** Implemented structured empty states across all tabs with explanatory text (e.g. *"No production batches recorded yet"*, *"No active surplus listings"*) paired with direct primary call-to-action buttons (*"+ Record Batch"*, *"Refresh Feed"*).
+```
+   ┌─────────────────────────────────────────────────────────────┐
+   │                  STUDENT PORTAL (Port 3001)                 │
+   │  • Meal Attendance RSVP & Smart Skip (with cutoff timers)   │
+   │  • Weekly Dining Menu Calendar                              │
+   │  • Digital Entry Pass (QR Code) & Dietary Feedback          │
+   │  • Personal Green Impact & Zero-Plate-Waste Records         │
+   └───────────────┬─────────────────────────────────────────────┘
+                   │ Real-time RSVP / Opt-Out Signals
+                   ▼
+   ┌─────────────────────────────────────────────────────────────┐
+   │             FASTAPI BACKEND & ML ENGINE (Port 8000)          │
+   │  • XGBoost Regressor (12 Features, MAE: 6.25 thalis)        │
+   │  • Asynchronous SQLAlchemy ORM (14 Relational Models)       │
+   │  • JWT Role-Based Access Control (Admin, Student, NGO)      │
+   │  • Calibrated Buffer Factor (+2.6% Safety Margin)           │
+   └───────┬─────────────────────────────────────────────┬───────┘
+           │ Predicted Demand & Prep Target              │ Available Surplus Alert
+           ▼                                             ▼
+┌──────────────────────────────────────┐     ┌───────────────────────────────────┐
+│       ADMIN PORTAL (Port 3002)       │     │       NGO PORTAL (Port 3003)      │
+│ • Operational KPIs & Shift Audits    │     │ • Verified Surplus Catalog        │
+│ • Production & 3-Tier Waste Logger   │     │ • 1-Click Concurrency Claims      │
+│ • Mandi & Kitchen Stock Management   │     │ • Rider Telemetry & Dispatch Bay  │
+│ • Used Cooking Oil (RUCO/Biofuel)    │     │ • 4-Digit Handover OTP Clearance  │
+│ • GreenRoute EV Quick-Commerce Fleet │     │ • Beneficiary Distribution Logs   │
+│ • Environmental Impact & Emission CO2│     └───────────────────────────────────┘
+└──────────────────────────────────────┘
+```
 
 ---
 
-## 5. Fixes Applied
+## 2. Existing Features & Audit Status
 
-* **Frontend Code:**
-  - `frontend/src/context/MesswiseContext.jsx`: Implemented real `handleLogin` and `handleLogout` wiring with FastAPI JWT authentication.
-  - `frontend/src/index.css`, `student-portal/src/index.css`, `admin-portal/src/index.css`, `ngo-portal/src/index.css`: Harmonized typography, color tokens, split-screen auth layouts, modal dialogs, and responsive grids.
-  - `frontend/src/pages/AdminPortal.jsx`, `frontend/src/pages/NgoPortal.jsx`, `frontend/src/pages/StudentPortal.jsx`: Enhanced empty and error states with Retry actions.
-* **Backend Code:**
-  - `backend/app/routers/auth.py`: Maintained unified login endpoint alongside role-specific routes.
-  - `backend/app/routers/student.py`, `backend/app/routers/admin.py`, `backend/app/routers/ngo.py`, `backend/app/routers/forecast.py`, `backend/app/routers/impact.py`: Validated 100% contract alignment with frontend API client.
-* **Database & ORM:**
-  - All 14 SQLAlchemy ORM models initialized and synchronized via `Base.metadata.create_all(bind=engine)`.
-
----
-
-## 6. API & Authentication Issues Summary
-* All endpoints use RESTful conventions under `/api/v1/` with backward-compatible aliases.
-* Stateless JWT Bearer tokens with 24-hour expiration stored in `localStorage` under `messwise_token`.
-* Role enforcement strictly handled via FastAPI `Depends(require_role(...))` preventing unauthorized privilege escalation.
+| Subsystem / Feature | Functional State | Architectural Health | UI/UX Status | Action in Current Sprint |
+|---|---|---|---|---|
+| **Demand Prediction** | Trained XGBoost model active (`val_mae=6.25`, `val_r2=0.9908`) | Excellent (1.00ms latency p95, static float32 buffer) | Needed transparency display for hackathon judges | Expose model metrics, feature weights, latency & compute footprint |
+| **Student RSVP & Meal Skipping** | Functional toggle updating database | Healthy (persisted across sessions) | Previously used emojis; cutoff rules needed clarity | Clean Lucide icons, explicit cutoff countdown badges, demand feedback |
+| **Kitchen Waste Tracking** | Production & leftover logger functional | Healthy (SQLite/PostgreSQL schema) | Needed clear 3-tier categorization | Standardize: Preparation Waste, Counter Leftover, Plate Waste |
+| **Used Cooking Oil (UCO)** | Dedicated UCO management tab | Healthy (TPM testing & drum logging) | Had decorative emoji badges | Replace with clean SVG indicators, RUCO FSSAI compliance badges |
+| **GreenRoute Fleet** | Dispatch simulation, HSRP plate, OTP handover | Unified to single component; deduplication active | Emojis in platform tags and selector chips | Clean Lucide vehicle & routing icons; crisp enterprise card layout |
+| **NGO Rescue Network** | Concurrency-safe claim & OTP flow | Healthy (BroadcastChannel sync) | Minor emoji badges in cards | Professional enterprise badge tokens and clear status pills |
+| **Design System** | Vanilla CSS tokens | Fast load, zero Tailwind dependency | Inconsistent dark/neon gradients and informal emojis | Upgrade to calm enterprise deep forest green (`#123b2a`), Inter typography |
 
 ---
 
-## 7. Empty Data Verification
-The following views have been tested and verified to display clean, intentional empty states when the database contains no records:
-- **Admin Production Logs**: *"No production batches recorded. Create a batch to begin tracking kitchen production."*
-- **NGO Available Surplus**: *"No active surplus listings. New surplus will appear here when unserved food is available."*
-- **NGO Claims / Pickups**: *"No active claims. Claim an available batch from the surplus feed to initiate a rescue pickup."*
-- **Student Meal Passes**: *"No meal tokens found. Book an upcoming meal to generate your entry QR code."*
+## 3. UI/UX Problems Identified & Root Causes
+
+1. **Informal Emoji Contamination**:
+   - *Problem*: Interface buttons, tabs, tables, and notifications contained casual emojis (`🌅`, `☀️`, `🌙`, `🥇`, `🛵`, `🌱`, `🍲`, `👑`).
+   - *Root Cause*: Early prototype phase used emojis as quick visual placeholders.
+   - *Fix*: Replace all emojis with standardized outline icons from `lucide-react` with consistent 14-18px bounding box and 2px stroke width.
+
+2. **Excessive Decorative Gradients & Glassmorphism**:
+   - *Problem*: Heavy neon drop shadows and multi-stop gradient headers made the interface appear consumer/gamified rather than serious university administrative software.
+   - *Root Cause*: Lack of strict enterprise CSS tokens across sub-portals.
+   - *Fix*: Establish calm enterprise styling: deep forest green primary (`#123b2a`), subtle 1px border lines (`#e2e8f0`), warm off-white canvas (`#f8fafc`), and purposeful whitespace.
+
+3. **Data Traceability & Environmental Calculation Claims**:
+   - *Problem*: Carbon numbers could be misconstrued as generic estimates.
+   - *Root Cause*: Missing explicit methodology disclosures on calculation cards.
+   - *Fix*: Clearly display documented emission factors:
+     - **Food Waste Avoided**: $2.50\text{ kg CO}_2\text{e per kg food saved}$ (UN FAO / EPA WARM benchmark).
+     - **Used Cooking Oil Recycled**: $2.82\text{ kg CO}_2\text{e per liter UCO}$ diverted to certified EN 14214 biodiesel.
+     - Label estimates distinctly from raw physical scale measurements.
 
 ---
 
-## 8. Tests Performed
-1. **Automated Backend Pytest Suite:**
-   - Command: `pytest backend/tests/ -v`
-   - Result: **32 passed in 1.48s (100% green)**
-   - Coverage: Auth, RBAC, Student RSVPs, Forecasting, What-If simulation, Production logging, Structured waste, Concurrency-safe surplus claims, Counter OTP handover, Distribution logging, Event ledger.
-2. **Vite Production Bundling:**
-   - Tested: `npm run build` in `frontend/`, `student-portal/`, `admin-portal/`, `ngo-portal/`
-   - Result: **0 build errors across all 4 applications**.
-3. **Live Process Verification:**
-   - FastAPI Backend (`:8000`): Active and responding to health/data endpoints.
-   - Unified Frontend (`:5173`): Active and serving public, student, admin, and ngo portals.
-   - Micro-Portals (`:3001`, `:3002`, `:3003`): Active and serving dedicated role views.
+## 4. Prioritized Implementation Plan
 
----
-
-## 9. Remaining Issues
-* **None.** There are zero unexplained blank screens, zero crashing routes, zero broken API contracts, and zero failed unit tests.
-
----
-
-## 10. Final Verification Status
-**`STABLE — VERIFIED`**
+1. **Phase 1: Design Token Harmonization (`index.css`)**:
+   - Implement deep forest green (`#123b2a`), crisp neutral slate borders, Inter typography, and responsive grid layouts without Tailwind.
+2. **Phase 2: Purge Informal Emojis Across All Portals**:
+   - Replace every emoji in navigation, tables, badges, headers, and buttons with Lucide React outline icons.
+3. **Phase 3: Enterprise Admin Portal Refinement**:
+   - Integrate KPIs, 3-tier waste logger, inventory alerts, UCO drum records, and ML transparency drawer.
+4. **Phase 4: Student Portal Experience**:
+   - Implement clear meal session tabs (Breakfast, Lunch, Dinner), meal skip cutoff badges with real-time feedback, and weekly menu calendar.
+5. **Phase 5: NGO Rescue Portal & GreenRoute Dispatch**:
+   - Polish surplus catalog, real-time OTP collection counter, and distribution verification logs.
+6. **Phase 6: End-to-End Chrome Browser Verification**:
+   - Perform automated browser testing on all ports (`:3001`, `:3002`, `:3003`, `:5173`) and document results.

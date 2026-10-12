@@ -236,8 +236,8 @@ const AdminPortal = () => {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Prepared Batch</div>
-                  <div className="kpi-value">{adminStats.today_stats.prepared}</div>
-                  <div className="kpi-meta">Lunch cycle total</div>
+                  <div className="kpi-value">{adminStats.today_stats.prepared} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Thalis</span></div>
+                  <div className="kpi-meta">Lunch cycle (~353 kg food total)</div>
                 </div>
                 <div className="kpi-icon brand">
                   <ChefHat size={18} />
@@ -247,8 +247,8 @@ const AdminPortal = () => {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Meals Served</div>
-                  <div className="kpi-value">{adminStats.today_stats.served}</div>
-                  <div className="kpi-meta">Student turnout verified</div>
+                  <div className="kpi-value">{adminStats.today_stats.served} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Thalis</span></div>
+                  <div className="kpi-meta">Student turnout (~343 kg eaten)</div>
                 </div>
                 <div className="kpi-icon brand">
                   <Check size={18} />
@@ -258,8 +258,8 @@ const AdminPortal = () => {
               <div className="kpi-card">
                 <div>
                   <div className="kpi-label">Available Surplus</div>
-                  <div className="kpi-value">{adminStats.today_stats.surplus}</div>
-                  <div className="kpi-meta">Portions for food rescue</div>
+                  <div className="kpi-value">{adminStats.today_stats.surplus} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Thalis</span></div>
+                  <div className="kpi-meta">Rescue batch (~10.5 kg to NGO)</div>
                 </div>
                 <div className="kpi-icon warm">
                   <Sparkles size={18} />
@@ -270,7 +270,7 @@ const AdminPortal = () => {
                 <div>
                   <div className="kpi-label">Plate Waste</div>
                   <div className="kpi-value">{adminStats.today_stats.waste} kg</div>
-                  <div className="kpi-meta">0.7% preparation ratio</div>
+                  <div className="kpi-meta">0.7% prep ratio (Safe limit &lt;15 kg)</div>
                 </div>
                 <div className="kpi-icon">
                   <Trash2 size={18} />
@@ -427,24 +427,6 @@ const AdminPortal = () => {
                 </form>
               </div>
             </div>
-
-            {/* GreenRoute Quick-Commerce Dispatch & Rider Telemetry */}
-            <GreenRouteTracker 
-              ngoRequests={ngoRequests}
-              onHandoverSuccess={(disp) => {
-                setAdminStats((prev) => ({
-                  ...prev,
-                  today_stats: {
-                    ...prev.today_stats,
-                    surplus: Math.max(0, prev.today_stats.surplus - disp.portions),
-                  }
-                }));
-                const matchingReq = ngoRequests.find(r => r.surplus_id === disp.surplusId || r.id === disp.id || r.otp === disp.otp);
-                if (matchingReq && matchingReq.status !== 'Collected') {
-                  confirmHandover(matchingReq.id, disp.otp || matchingReq.otp).catch(() => {});
-                }
-              }}
-            />
 
             {/* Active NGO Handover Verification Queue */}
             <div className="panel">
@@ -750,10 +732,6 @@ const AdminPortal = () => {
           <UcoManagement />
         )}
 
-        {/* Tab: GreenRoute Dispatches */}
-        {activeTab === 'greenroute' && (
-          <GreenRouteTracker />
-        )}
       </main>
 
       {/* Handover Modal */}

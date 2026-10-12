@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 import joblib
 from math import sqrt
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
@@ -189,15 +189,15 @@ def train_all():
     xgb_pipe = Pipeline([
         ("scaler", StandardScaler()),
         ("model", xgb.XGBRegressor(
-            n_estimators=300,
+            n_estimators=400,
             max_depth=6,
-            learning_rate=0.08,
-            subsample=0.85,
-            colsample_bytree=0.85,
-            min_child_weight=3,
-            gamma=0.1,
-            reg_alpha=0.05,
-            reg_lambda=1.0,
+            learning_rate=0.04,
+            subsample=0.90,
+            colsample_bytree=0.90,
+            min_child_weight=2,
+            gamma=0.02,
+            reg_alpha=0.01,
+            reg_lambda=0.5,
             objective="reg:squarederror",
             eval_metric="rmse",
             random_state=RANDOM_SEED,

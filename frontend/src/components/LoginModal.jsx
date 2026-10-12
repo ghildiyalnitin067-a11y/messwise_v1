@@ -56,11 +56,11 @@ const UnifiedLoginModal = ({ isOpen, onClose }) => {
 
       await handleLogin(role, credentials);
       if (role === 'student') {
-        window.location.href = 'http://localhost:3001';
+        window.location.href = import.meta.env.VITE_STUDENT_PORTAL_URL || '/student';
       } else if (role === 'admin') {
-        window.location.href = 'http://localhost:3002';
+        window.location.href = import.meta.env.VITE_ADMIN_PORTAL_URL || '/admin';
       } else if (role === 'ngo') {
-        window.location.href = 'http://localhost:3003';
+        window.location.href = import.meta.env.VITE_NGO_PORTAL_URL || '/ngo';
       }
       onClose();
     } catch (err) {

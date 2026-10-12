@@ -24,9 +24,9 @@ const NgoPortal = () => {
   const [selectedSurplusForClaim, setSelectedSurplusForClaim] = useState(null);
 
   // Distribution Form
-  const [distBatch, setDistBatch] = useState('Rajma Rice (Hostel A)');
-  const [distPeople, setDistPeople] = useState(25);
-  const [distLocation, setDistLocation] = useState('Community Shelter #4, Sector 12');
+  const [distBatch, setDistBatch] = useState('Rajma Masala + Rice (Hostel A)');
+  const [distPeople, setDistPeople] = useState(65);
+  const [distLocation, setDistLocation] = useState('Rain Basera Night Shelter, Near Old Railway Station Gate 2');
   const [distSuccess, setDistSuccess] = useState(false);
 
   const handleClaimSubmit = async (surplusId, details) => {
@@ -369,6 +369,49 @@ const NgoPortal = () => {
                   </button>
                 </div>
               </form>
+
+              {/* Recent Verified Shelter Distribution Log */}
+              <div style={{ marginTop: '1.75rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ShieldCheck size={16} color="#16a34a" />
+                  <span>Recent Shelter Distribution &amp; Geo-Tag Receipt Audit</span>
+                </div>
+                <div className="table-container">
+                  <table className="saas-table">
+                    <thead>
+                      <tr>
+                        <th>Date &amp; Time</th>
+                        <th>Food Batch</th>
+                        <th>Shelter Destination</th>
+                        <th>Beneficiaries Fed</th>
+                        <th>Temp at Handover</th>
+                        <th>Verification Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { time: 'Today 2:15 PM', batch: 'Rajma Masala + Steamed Rice (Hostel A)', shelter: 'Rain Basera Night Shelter, Gate 2', people: 65, temp: '66.2°C', status: 'Delivered & Signed' },
+                        { time: 'Yesterday 8:45 PM', batch: 'Paneer Makhani + Roti (Hostel B)', shelter: 'Asha Jyoti Bal Ashram, Sector 14', people: 40, temp: '64.8°C', status: 'Delivered & Signed' },
+                        { time: '14 Sep 2:30 PM', batch: 'Chole Bhature (Sunday Feast Batch)', shelter: 'Kalyanpuri Slum Community Kitchen', people: 80, temp: '67.0°C', status: 'Delivered & Signed' },
+                        { time: '13 Sep 9:15 PM', batch: 'Khichdi + Papad (Exodus Batch)', shelter: 'Shanti Vridh Ashram, Civil Lines', people: 30, temp: '65.5°C', status: 'Delivered & Signed' },
+                      ].map((log, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{log.time}</td>
+                          <td style={{ fontWeight: 600 }}>{log.batch}</td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{log.shelter}</td>
+                          <td style={{ fontWeight: 700, color: 'var(--brand-900)' }}>{log.people} Persons</td>
+                          <td style={{ color: '#16a34a', fontWeight: 600 }}>{log.temp}</td>
+                          <td>
+                            <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Check size={11} /> {log.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}

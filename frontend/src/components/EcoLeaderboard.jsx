@@ -15,7 +15,12 @@ import {
   ChevronRight, 
   Users,
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Crown,
+  Medal,
+  Utensils,
+  Ticket,
+  FileText
 } from 'lucide-react';
 import { studentApi } from '../api/client';
 
@@ -24,7 +29,7 @@ const DEFAULT_LEADERBOARD = [
     rank: 1,
     id: 'st-aarav-01',
     name: 'Aarav Patel',
-    avatar: '🥇',
+    avatar: 'AP',
     roll_no: '2022CSB019',
     hostel: 'Hostel B (Ramanujan)',
     room: 'A-108',
@@ -33,14 +38,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 48.5,
     streak_days: 28,
     tier: 'Eco Legend',
-    badge: '🥇 1st Gold',
+    badge: 'Gold Tier',
     is_current_user: false,
   },
   {
     rank: 2,
     id: 'st-priya-02',
     name: 'Priya Sharma',
-    avatar: '🥈',
+    avatar: 'PS',
     roll_no: '2023EEB054',
     hostel: 'Hostel C (Gargi)',
     room: 'C-212',
@@ -49,14 +54,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 42.1,
     streak_days: 24,
     tier: 'Green Champion',
-    badge: '🥈 2nd Silver',
+    badge: 'Silver Tier',
     is_current_user: false,
   },
   {
     rank: 3,
     id: 'st-rohan-03',
     name: 'Rohan Sengupta',
-    avatar: '🥉',
+    avatar: 'RS',
     roll_no: '2022MEB088',
     hostel: 'Hostel A (Aryabhatta)',
     room: 'B-114',
@@ -65,14 +70,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 38.0,
     streak_days: 21,
     tier: 'Green Champion',
-    badge: '🥉 3rd Bronze',
+    badge: 'Bronze Tier',
     is_current_user: false,
   },
   {
     rank: 4,
     id: 'st-ananya-04',
     name: 'Ananya Iyer',
-    avatar: '⭐',
+    avatar: 'AI',
     roll_no: '2023CSB112',
     hostel: 'Hostel C (Gargi)',
     room: 'D-305',
@@ -81,14 +86,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 33.2,
     streak_days: 19,
     tier: 'Sustainability Hero',
-    badge: '⭐ Top 5',
+    badge: 'Top 5',
     is_current_user: false,
   },
   {
     rank: 5,
     id: 'usr-student-01',
     name: 'Nitin Sharma',
-    avatar: '👨‍🎓',
+    avatar: 'NS',
     roll_no: '2022CSB042',
     hostel: 'Hostel A (Aryabhatta)',
     room: 'B-304',
@@ -97,14 +102,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 24.0,
     streak_days: 18,
     tier: 'Sustainability Hero',
-    badge: '⭐ Top 5',
+    badge: 'Top 5',
     is_current_user: true,
   },
   {
     rank: 6,
     id: 'st-siddharth-05',
     name: 'Siddharth Rao',
-    avatar: '🌱',
+    avatar: 'SR',
     roll_no: '2022CHB031',
     hostel: 'Hostel A (Aryabhatta)',
     room: 'B-402',
@@ -113,14 +118,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 25.4,
     streak_days: 14,
     tier: 'Sustainability Hero',
-    badge: '🌿 Top 10',
+    badge: 'Top 10',
     is_current_user: false,
   },
   {
     rank: 7,
     id: 'st-divya-06',
     name: 'Divya Nair',
-    avatar: '🌿',
+    avatar: 'DN',
     roll_no: '2024CSB009',
     hostel: 'Hostel B (Ramanujan)',
     room: 'A-321',
@@ -129,14 +134,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 22.8,
     streak_days: 12,
     tier: 'Eco Warrior',
-    badge: '🌿 Top 10',
+    badge: 'Top 10',
     is_current_user: false,
   },
   {
     rank: 8,
     id: 'st-kabir-07',
     name: 'Kabir Joshi',
-    avatar: '🍃',
+    avatar: 'KJ',
     roll_no: '2023CEB077',
     hostel: 'Hostel D (Kalam)',
     room: 'E-101',
@@ -145,14 +150,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 19.5,
     streak_days: 10,
     tier: 'Eco Warrior',
-    badge: '🌿 Top 10',
+    badge: 'Top 10',
     is_current_user: false,
   },
   {
     rank: 9,
     id: 'st-sneha-08',
     name: 'Sneha Kulkarni',
-    avatar: '🌾',
+    avatar: 'SK',
     roll_no: '2024EEB043',
     hostel: 'Hostel C (Gargi)',
     room: 'C-118',
@@ -161,14 +166,14 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 16.2,
     streak_days: 8,
     tier: 'Sprout',
-    badge: '🌿 Top 10',
+    badge: 'Top 10',
     is_current_user: false,
   },
   {
     rank: 10,
     id: 'st-vikram-09',
     name: 'Vikram Malhotra',
-    avatar: '🍀',
+    avatar: 'VM',
     roll_no: '2022MEB015',
     hostel: 'Hostel B (Ramanujan)',
     room: 'A-205',
@@ -177,7 +182,7 @@ const DEFAULT_LEADERBOARD = [
     co2_avoided_kg: 13.8,
     streak_days: 7,
     tier: 'Sprout',
-    badge: '🌿 Top 10',
+    badge: 'Top 10',
     is_current_user: false,
   },
 ];
@@ -189,7 +194,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
   const [pointsToNext, setPointsToNext] = useState(130);
   const [selectedHostel, setSelectedHostel] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('points');
+  const [sortBy, setSortBy] = useState('points'); // 'points' | 'streak' | 'saved'
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -206,6 +211,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
         setCurrentUserPoints(res.current_student_points || (currentStudent?.eco_points || 580));
         setPointsToNext(res.points_to_next_rank || 130);
       } else {
+        // Integrate current student points into default data
         const updated = DEFAULT_LEADERBOARD.map((item) => {
           if (item.is_current_user) {
             const pts = currentStudent?.eco_points || 580;
@@ -227,12 +233,13 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
         }
       }
     } catch {
-      // Graceful fallback
+      // Fallback works gracefully
     } finally {
       setLoading(false);
     }
   };
 
+  // Filter & sort entries
   const filteredEntries = leaderboardData
     .filter((entry) => {
       const matchHostel = selectedHostel === 'all' || entry.hostel.toLowerCase().includes(selectedHostel.toLowerCase());
@@ -248,6 +255,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
       return b.eco_points - a.eco_points;
     });
 
+  // Top 3 Podium
   const top1 = leaderboardData[0];
   const top2 = leaderboardData[1];
   const top3 = leaderboardData[2];
@@ -313,13 +321,14 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                 color: '#ffffff',
               }}
             >
-              Eco Points Leaderboard 🏆
+              Eco Points Leaderboard
             </h1>
             <p style={{ color: '#d6e2d4', fontSize: '0.96rem', lineHeight: 1.5, margin: 0 }}>
               Recognizing student eco boarders leading zero food-waste practices, timely meal opt-outs, and farm produce rescues.
             </p>
           </div>
 
+          {/* Current Student Quick Progress Pill */}
           <div
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
@@ -359,12 +368,13 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
               </div>
             ) : (
               <div style={{ fontSize: '0.82rem', color: '#86efac', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                👑 You are holding the top leaderboard spot!
+                <Crown size={14} /> You are holding the top leaderboard spot!
               </div>
             )}
           </div>
         </div>
 
+        {/* Decorative background glow */}
         <div
           style={{
             position: 'absolute',
@@ -396,7 +406,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
             alignItems: 'end',
           }}
         >
-          {/* 🥈 #2 Silver */}
+          {/* #2 Silver */}
           {top2 && (
             <div
               style={{
@@ -423,11 +433,16 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   fontWeight: 800,
                   padding: '0.2rem 0.6rem',
                   borderRadius: '999px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                🥈 2nd Place
+                <Medal size={12} /> 2nd Place
               </div>
-              <div style={{ fontSize: '3rem', margin: '0.5rem 0 0.25rem' }}>🥈</div>
+              <div style={{ margin: '0.75rem 0 0.5rem', display: 'flex', justifyContent: 'center' }}>
+                <Medal size={42} className="text-slate-400" />
+              </div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1d3324', marginBottom: '0.15rem' }}>{top2.name}</h3>
               <p style={{ fontSize: '0.82rem', color: '#55685a', marginBottom: '0.75rem' }}>{top2.hostel}</p>
 
@@ -452,7 +467,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   <div style={{ fontSize: '0.72rem', color: '#748879', fontWeight: 600 }}>Meals Saved</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706' }}>🔥{top2.streak_days}d</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                    <Flame size={15} /> {top2.streak_days}d
+                  </div>
                   <div style={{ fontSize: '0.72rem', color: '#748879', fontWeight: 600 }}>Streak</div>
                 </div>
               </div>
@@ -472,7 +489,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
             </div>
           )}
 
-          {/* 🥇 #1 Gold Champion */}
+          {/* #1 Gold Champion */}
           {top1 && (
             <div
               style={{
@@ -500,11 +517,16 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   padding: '0.3rem 0.9rem',
                   borderRadius: '999px',
                   boxShadow: '0 2px 4px rgba(217, 119, 6, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                👑 CAMPUS LEADER
+                <Crown size={13} /> CAMPUS LEADER
               </div>
-              <div style={{ fontSize: '3.6rem', margin: '0.4rem 0 0.25rem' }}>🥇</div>
+              <div style={{ margin: '0.75rem 0 0.5rem', display: 'flex', justifyContent: 'center' }}>
+                <Trophy size={48} className="text-amber-500" />
+              </div>
               <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1d3324', marginBottom: '0.15rem' }}>{top1.name}</h3>
               <p style={{ fontSize: '0.85rem', color: '#55685a', marginBottom: '0.85rem' }}>{top1.hostel}</p>
 
@@ -529,7 +551,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 700 }}>Meals Saved</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#dc2626' }}>🔥{top1.streak_days}d</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                    <Flame size={17} /> {top1.streak_days}d
+                  </div>
                   <div style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 700 }}>Streak</div>
                 </div>
               </div>
@@ -545,12 +569,12 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   border: '1px solid #fcd34d',
                 }}
               >
-                👑 {top1.tier}
+                {top1.tier}
               </span>
             </div>
           )}
 
-          {/* 🥉 #3 Bronze */}
+          {/* #3 Bronze */}
           {top3 && (
             <div
               style={{
@@ -577,11 +601,16 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   fontWeight: 800,
                   padding: '0.2rem 0.6rem',
                   borderRadius: '999px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                🥉 3rd Place
+                <Award size={12} /> 3rd Place
               </div>
-              <div style={{ fontSize: '3rem', margin: '0.5rem 0 0.25rem' }}>🥉</div>
+              <div style={{ margin: '0.75rem 0 0.5rem', display: 'flex', justifyContent: 'center' }}>
+                <Award size={42} className="text-amber-700" />
+              </div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1d3324', marginBottom: '0.15rem' }}>{top3.name}</h3>
               <p style={{ fontSize: '0.82rem', color: '#55685a', marginBottom: '0.75rem' }}>{top3.hostel}</p>
 
@@ -606,7 +635,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                   <div style={{ fontSize: '0.72rem', color: '#748879', fontWeight: 600 }}>Meals Saved</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706' }}>🔥{top3.streak_days}d</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                    <Flame size={15} /> {top3.streak_days}d
+                  </div>
                   <div style={{ fontSize: '0.72rem', color: '#748879', fontWeight: 600 }}>Streak</div>
                 </div>
               </div>
@@ -645,6 +676,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: 1 }}>
+          {/* Search box */}
           <div
             style={{
               display: 'flex',
@@ -674,6 +706,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
             />
           </div>
 
+          {/* Hostel Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#55685a' }}>Hostel:</span>
             {['all', 'Hostel A', 'Hostel B', 'Hostel C'].map((h) => (
@@ -699,11 +732,12 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
           </div>
         </div>
 
+        {/* Sort selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#55685a' }}>Sort by:</span>
           {[
             { id: 'points', label: 'Eco Points' },
-            { id: 'streak', label: 'Streak 🔥' },
+            { id: 'streak', label: 'Green Streak' },
             { id: 'saved', label: 'Meals Saved' },
           ].map((s) => (
             <button
@@ -794,14 +828,15 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                       if (!isMe) e.currentTarget.style.background = 'transparent';
                     }}
                   >
+                    {/* Rank */}
                     <td style={{ padding: '1rem 1.25rem', verticalAlign: 'middle' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         {row.rank === 1 ? (
-                          <span style={{ fontSize: '1.25rem' }}>🥇</span>
+                          <Trophy size={18} className="text-amber-500" />
                         ) : row.rank === 2 ? (
-                          <span style={{ fontSize: '1.25rem' }}>🥈</span>
+                          <Medal size={18} className="text-slate-400" />
                         ) : row.rank === 3 ? (
-                          <span style={{ fontSize: '1.25rem' }}>🥉</span>
+                          <Award size={18} className="text-amber-700" />
                         ) : (
                           <span
                             style={{
@@ -823,9 +858,27 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                       </div>
                     </td>
 
+                    {/* Student Name */}
                     <td style={{ padding: '1rem 1rem', verticalAlign: 'middle' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <span style={{ fontSize: '1.2rem' }}>{row.avatar}</span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: isMe ? '#dcfce7' : '#f1f5f9',
+                            color: isMe ? '#166534' : '#334155',
+                            fontWeight: 700,
+                            fontSize: '0.78rem',
+                            border: '1px solid #e2e8f0',
+                            flexShrink: 0
+                          }}
+                        >
+                          {row.avatar}
+                        </span>
                         <div>
                           <div style={{ color: '#1d3324', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <span>{row.name}</span>
@@ -852,11 +905,13 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                       </div>
                     </td>
 
+                    {/* Hostel & Room */}
                     <td style={{ padding: '1rem 1rem', verticalAlign: 'middle', color: '#55685a' }}>
                       <div>{row.hostel}</div>
                       {row.room && <div style={{ fontSize: '0.75rem', color: '#748879' }}>Room {row.room}</div>}
                     </td>
 
+                    {/* Eco Points */}
                     <td style={{ padding: '1rem 1rem', verticalAlign: 'middle', textAlign: 'right' }}>
                       <div
                         style={{
@@ -883,6 +938,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                       </div>
                     </td>
 
+                    {/* Streak */}
                     <td style={{ padding: '1rem 1rem', verticalAlign: 'middle', textAlign: 'center' }}>
                       <span
                         style={{
@@ -899,14 +955,17 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                       </span>
                     </td>
 
+                    {/* Meals Saved */}
                     <td style={{ padding: '1rem 1rem', verticalAlign: 'middle', textAlign: 'center', color: '#1d3324', fontWeight: 600 }}>
                       {row.meals_saved} meals
                     </td>
 
+                    {/* CO2 Avoided */}
                     <td style={{ padding: '1rem 1rem', verticalAlign: 'middle', textAlign: 'center', color: '#44684f', fontWeight: 600 }}>
                       {row.co2_avoided_kg.toFixed(1)} kg
                     </td>
 
+                    {/* Tier Badge */}
                     <td style={{ padding: '1rem 1.25rem', verticalAlign: 'middle', textAlign: 'right' }}>
                       <span
                         style={{
@@ -933,6 +992,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
 
       {/* 5. How to Earn Eco Points + Campus Milestone Perks */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+        {/* Ways to Earn Points */}
         <div
           style={{
             background: '#ffffff',
@@ -983,7 +1043,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <span style={{ fontSize: '1.3rem' }}>🥗</span>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
+                  <Leaf size={16} />
+                </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#1d3324' }}>Claim Zero-Waste Special</div>
                   <div style={{ fontSize: '0.75rem', color: '#55685a' }}>Add rescued fresh farm produce to plate</div>
@@ -1004,7 +1066,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <span style={{ fontSize: '1.3rem' }}>🍽️</span>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0369a1' }}>
+                  <Utensils size={16} />
+                </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#1d3324' }}>Zero Plate-Waste Review</div>
                   <div style={{ fontSize: '0.75rem', color: '#55685a' }}>Submit feedback confirming finished meal</div>
@@ -1025,7 +1089,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <span style={{ fontSize: '1.3rem' }}>🔥</span>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                  <Flame size={16} />
+                </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#92400e' }}>7-Day Green Streak</div>
                   <div style={{ fontSize: '0.75rem', color: '#b45309' }}>Zero food waste log for full week</div>
@@ -1036,6 +1102,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
           </div>
         </div>
 
+        {/* Milestone Perks & Incentives */}
         <div
           style={{
             background: '#ffffff',
@@ -1064,7 +1131,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                 gap: '0.85rem',
               }}
             >
-              <div style={{ fontSize: '1.6rem' }}>🎟️</div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6d28d9' }}>
+                <Ticket size={18} />
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1d3324' }}>
@@ -1089,7 +1158,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                 gap: '0.85rem',
               }}
             >
-              <div style={{ fontSize: '1.6rem' }}>🍰</div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                <Star size={18} />
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1d3324' }}>
@@ -1099,7 +1170,7 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                     {currentUserPoints >= 650 ? '✓ Unlocked' : `${650 - currentUserPoints} pts to go`}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#55685a' }}>Complimentary Gulab Jamun / Kulfi on Sunday dinners</div>
+                <div style={{ fontSize: '0.75rem', color: '#55685a' }}>Complimentary dessert token on Sunday dinners</div>
               </div>
             </div>
 
@@ -1114,7 +1185,9 @@ const EcoLeaderboard = ({ currentStudent, onNavigateTab }) => {
                 gap: '0.85rem',
               }}
             >
-              <div style={{ fontSize: '1.6rem' }}>📜</div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d' }}>
+                <FileText size={18} />
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#1d3324' }}>

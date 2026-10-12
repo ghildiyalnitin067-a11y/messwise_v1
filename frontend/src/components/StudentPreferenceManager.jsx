@@ -15,7 +15,9 @@ import {
   Clock,
   Flame,
   Info,
-  Lock
+  Lock,
+  Sun,
+  Moon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { preferenceApi } from '../api/client';
@@ -209,8 +211,8 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
         {/* Session toggle buttons */}
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           {[
-            { id: 'lunch', label: 'Lunch Session', icon: '☀️' },
-            { id: 'dinner', label: 'Dinner Session', icon: '🌙' },
+            { id: 'lunch', label: 'Lunch Session', Icon: Sun },
+            { id: 'dinner', label: 'Dinner Session', Icon: Moon },
           ].map((sess) => (
             <button
               key={sess.id}
@@ -231,7 +233,7 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>{sess.icon}</span>
+              <sess.Icon size={14} />
               <span>{sess.label}</span>
             </button>
           ))}
@@ -352,7 +354,7 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
                 {/* Candidate Options in Category */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
                   {catGroup.options.map((opt) => {
-                    const isSelected = currentSelection === opt.id;
+                    const isSelected = currentSelection === opt.id || (pollData?.student_selection && pollData.student_selection.includes(opt.id));
                     const isBelowThreshold = opt.vote_percentage < opt.min_threshold_pct;
                     const isPruned = !opt.is_active;
 
@@ -360,7 +362,7 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
                       <div
                         key={opt.id}
                         onClick={() => {
-                          if (!isPruned) handleSelectOption(catGroup.category, opt.id);
+                          if (!isPruned && !isDailyLimitReached) handleSelectOption(catGroup.category, opt.id);
                         }}
                         style={{
                           border: '2px solid',
@@ -368,7 +370,7 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
                           borderRadius: '10px',
                           padding: '0.85rem',
                           backgroundColor: isSelected ? '#f0fdf4' : (isPruned ? '#f8fafc' : '#ffffff'),
-                          cursor: isPruned ? 'not-allowed' : 'pointer',
+                          cursor: (isPruned || isDailyLimitReached) ? 'not-allowed' : 'pointer',
                           opacity: isPruned ? 0.6 : 1,
                           transition: 'all 0.15s ease',
                           position: 'relative',

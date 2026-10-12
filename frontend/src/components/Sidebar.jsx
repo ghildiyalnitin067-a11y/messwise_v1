@@ -31,7 +31,7 @@ const Sidebar = ({ role = 'student', activeTab, onTabChange }) => {
     { id: 'history', label: 'Booking Passes', icon: CalendarCheck },
   ];
   const studentSecondary = [
-    { id: 'leaderboard', label: 'Eco Leaderboard', icon: Trophy, badge: '🔥 Top 5' },
+    { id: 'leaderboard', label: 'Eco Leaderboard', icon: Trophy, badge: 'Top 5' },
     { id: 'impact', label: 'Eco Impact & Ranking', icon: Award },
   ];
 

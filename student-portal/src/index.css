@@ -222,14 +222,14 @@ a {
 }
 
 .nav-item:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
+  background-color: transparent;
+  color: var(--brand-900);
 }
 
 .nav-item.active {
-  background-color: var(--brand-50);
+  background-color: transparent;
   color: var(--brand-900);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .nav-label {
@@ -238,7 +238,8 @@ a {
   gap: 0.65rem;
 }
 
-.nav-badge {
+.nav-badge,
+.sidebar-nav .nav-badge {
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.15rem 0.45rem;
@@ -248,10 +249,12 @@ a {
   border: 1px solid var(--border-subtle);
 }
 
-.nav-item.active .nav-badge {
-  background-color: #ffffff;
+.nav-item.active .nav-badge,
+.sidebar-nav .nav-item.active .nav-badge {
+  background-color: var(--bg-canvas-subtle);
   color: var(--brand-900);
-  border-color: var(--brand-100);
+  border-color: var(--border-subtle);
+  font-weight: 700;
 }
 
 .sidebar-footer {

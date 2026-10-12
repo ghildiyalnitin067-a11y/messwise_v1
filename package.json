@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "description": "MessWise Intelligent Campus Food Management & Redistribution Ecosystem",
   "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
     "dev:all-portals": "npm --prefix frontend run dev",
     "dev:student": "npm --prefix student-portal run dev",
     "dev:admin": "npm --prefix admin-portal run dev",

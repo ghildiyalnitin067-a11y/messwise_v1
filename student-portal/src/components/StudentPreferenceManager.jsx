@@ -15,7 +15,9 @@ import {
   Clock,
   Flame,
   Info,
-  Lock
+  Lock,
+  Sun,
+  Moon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { preferenceApi } from '../api/client';
@@ -209,8 +211,8 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
         {/* Session toggle buttons */}
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           {[
-            { id: 'lunch', label: 'Lunch Session', icon: '☀️' },
-            { id: 'dinner', label: 'Dinner Session', icon: '🌙' },
+            { id: 'lunch', label: 'Lunch Session', Icon: Sun },
+            { id: 'dinner', label: 'Dinner Session', Icon: Moon },
           ].map((sess) => (
             <button
               key={sess.id}
@@ -231,7 +233,7 @@ const StudentPreferenceManager = ({ onPreferenceSubmitted, isModal = false, onCl
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>{sess.icon}</span>
+              <sess.Icon size={14} />
               <span>{sess.label}</span>
             </button>
           ))}

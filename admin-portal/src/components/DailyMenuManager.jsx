@@ -491,7 +491,10 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                           gap: '0.2rem',
                         }}
                       >
-                        <span>{sKey === 'breakfast' ? '🌅' : sKey === 'lunch' ? '☀️' : sKey === 'snacks' ? '☕' : '🌙'}</span>
+                        {(() => {
+                          const SIcon = SESSION_META[sKey]?.icon || Utensils;
+                          return <SIcon size={16} color={isSelected ? '#1d3324' : '#55685a'} />;
+                        })()}
                         <span>{sKey.slice(0, 1).toUpperCase() + sKey.slice(1)}</span>
                       </button>
                     );

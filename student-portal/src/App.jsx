@@ -15,7 +15,15 @@ import {
   CheckCircle2,
   PlusCircle,
   Trophy,
-  ThumbsUp
+  ThumbsUp,
+  Sun,
+  SunMedium,
+  Coffee,
+  Moon,
+  Megaphone,
+  AlertTriangle,
+  CloudRain,
+  Calendar
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Sidebar from './components/Sidebar';
@@ -74,7 +82,7 @@ function App() {
         spread: 65,
         origin: { y: 0.6 }
       });
-      setAddonToastMsg(`🌱 Zero-Waste Special Added! Rescued fresh produce. +${addon.eco_points || 25} Eco Points awarded to your profile!`);
+      setAddonToastMsg(`Zero-Waste Special Added! Rescued fresh produce. +${addon.eco_points || 25} Eco Points awarded to your profile!`);
       setTimeout(() => setAddonToastMsg(null), 4500);
     } catch {
       setAddonToastMsg('Failed to add special.');
@@ -304,6 +312,48 @@ function App() {
               </button>
             </div>
 
+            {/* Real Campus Mess Notice Board & Daily Advisories */}
+            <div style={{
+              background: '#fefce8',
+              border: '1px solid #fef08a',
+              borderRadius: '12px',
+              padding: '0.9rem 1.25rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#854d0e', fontSize: '0.88rem' }}>
+                  <Megaphone size={16} />
+                  <span>Hostel A Central Mess — Operational Advisories & Deadlines</span>
+                </div>
+                <span style={{ fontSize: '0.74rem', background: '#fef08a', color: '#713f12', padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: 600 }}>
+                  Updated today by Supervisor Rajesh Kumar
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.65rem', marginTop: '0.2rem' }}>
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '0.65rem 0.85rem', border: '1px solid #fef9c3', fontSize: '0.8rem', color: '#475569', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                  <AlertTriangle size={15} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ color: '#92400e' }}>Weekend Outing Cutoff:</strong> If traveling this Friday, cancel dinner RSVP before <strong>4:00 PM</strong> to allow kitchen prep calibration and prevent unserved waste.
+                  </div>
+                </div>
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '0.65rem 0.85rem', border: '1px solid #fef9c3', fontSize: '0.8rem', color: '#475569', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                  <CloudRain size={15} style={{ color: '#059669', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ color: '#166534' }}>Rain Contingency Active:</strong> Campus delivery is restricted due to waterlogging. Extra hot roti counter active today to handle 100% dining hall attendance.
+                  </div>
+                </div>
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '0.65rem 0.85rem', border: '1px solid #fef9c3', fontSize: '0.8rem', color: '#475569', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                  <Calendar size={15} style={{ color: '#2563eb', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ color: '#1e40af' }}>Sunday Special Feast:</strong> Special Dum Biryani tokens will activate on your app at 12:00 PM. Please present your digital token pass at Counter 2.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Today's Meal RSVPs */}
             <div className="panel">
               <div className="panel-header">
@@ -338,10 +388,10 @@ function App() {
 
                 <div className="meal-rsvp-list">
                   {[
-                    { id: 'breakfast', name: 'Breakfast', icon: '🌅', defaultTime: '7:30 AM - 9:30 AM' },
-                    { id: 'lunch', name: 'Lunch', icon: '☀️', defaultTime: '12:30 PM - 2:30 PM' },
-                    { id: 'snacks', name: 'Evening Snacks', icon: '☕', defaultTime: '4:30 PM - 6:00 PM' },
-                    { id: 'dinner', name: 'Dinner', icon: '🌙', defaultTime: '7:30 PM - 9:30 PM' },
+                    { id: 'breakfast', name: 'Breakfast', iconComponent: <Sun size={15} className="text-amber-600" />, defaultTime: '7:30 AM - 9:30 AM' },
+                    { id: 'lunch', name: 'Lunch', iconComponent: <SunMedium size={15} className="text-amber-700" />, defaultTime: '12:30 PM - 2:30 PM' },
+                    { id: 'snacks', name: 'Evening Snacks', iconComponent: <Coffee size={15} className="text-stone-600" />, defaultTime: '4:30 PM - 6:00 PM' },
+                    { id: 'dinner', name: 'Dinner', iconComponent: <Moon size={15} className="text-indigo-600" />, defaultTime: '7:30 PM - 9:30 PM' },
                   ].map((sess) => {
                     const meal = studentMeals[sess.id] || { session: sess.id, menu: 'Menu being prepared', time: sess.defaultTime, booked: false };
                     const isBooked = Boolean(meal.booked);
@@ -352,7 +402,7 @@ function App() {
                           <div className="meal-rsvp-info">
                             <div>
                               <div className="meal-session-name" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                                <span>{sess.icon}</span>
+                                <span>{sess.iconComponent}</span>
                                 <span>{sess.name}</span>
                               </div>
                               <div className="meal-time-tag">
@@ -514,6 +564,57 @@ function App() {
                     </div>
                   </form>
                 )}
+                {/* Recent Student Feedback & Chef Actions */}
+                <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
+                    Recent Student Grievances &amp; Head Chef Resolution Tracker:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                    {[
+                      {
+                        student: "Aarav Sharma (B-204)",
+                        meal: "Today Lunch (Rajma Rice)",
+                        rating: 4,
+                        comment: "Rajma was delicious and thick, but rice ran out 15 mins before closing!",
+                        reply: "Supervisor: ML buffer increased by 15 portions for late-arriving boarders.",
+                      },
+                      {
+                        student: "Rahul Meena (C-311)",
+                        meal: "Today Breakfast (Poha + Banana)",
+                        rating: 5,
+                        comment: "Poha with roasted peanuts and hot lemon tea was fresh and on time. Good job team!",
+                        reply: "Chef Rajesh: Thank you Rahul! Glad you enjoyed the breakfast.",
+                      },
+                      {
+                        student: "Harshil Patel (B-118)",
+                        meal: "15 Sep Dinner (Dal Tadka)",
+                        rating: 2,
+                        comment: "Yellow dal was very watery like turmeric water. Rotis became rubbery by 9:00 PM.",
+                        reply: "Chef Rajesh: Dal-water ratio recalibrated with cook. Rotis moved to double-insulated warmers after 8:30 PM.",
+                      }
+                    ].map((rev, idx) => (
+                      <div key={idx} style={{
+                        background: 'var(--bg-canvas-subtle)',
+                        borderRadius: '8px',
+                        padding: '0.75rem 0.95rem',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: '0.8rem',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{rev.student} • <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>{rev.meal}</span></span>
+                          <span style={{ color: '#d97706', fontSize: '0.8rem' }}>{'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}</span>
+                        </div>
+                        <p style={{ color: 'var(--text-secondary)', margin: '0.2rem 0 0.4rem 0', fontStyle: 'italic' }}>
+                          "{rev.comment}"
+                        </p>
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.35rem 0.6rem', color: '#166534', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <CheckCircle2 size={12} color="#16a34a" />
+                          <span><strong>{rev.reply}</strong></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -549,10 +650,10 @@ function App() {
                 <thead>
                   <tr>
                     <th style={{ width: '130px' }}>Day</th>
-                    <th>🌅 Breakfast</th>
-                    <th>☀️ Lunch</th>
-                    <th>☕ Snacks</th>
-                    <th>🌙 Dinner</th>
+                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Sun size={13} className="text-amber-600" /> Breakfast</span></th>
+                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><SunMedium size={13} className="text-amber-700" /> Lunch</span></th>
+                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Coffee size={13} className="text-stone-600" /> Snacks</span></th>
+                    <th><span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Moon size={13} className="text-indigo-600" /> Dinner</span></th>
                   </tr>
                 </thead>
                 <tbody>

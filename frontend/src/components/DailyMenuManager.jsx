@@ -64,7 +64,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('push');
+  const [modalMode, setModalMode] = useState('push'); // 'push' (append) or 'edit' (replace)
   const [targetSession, setTargetSession] = useState('snacks');
   const [dishInput, setDishInput] = useState('');
   const [timeWindowInput, setTimeWindowInput] = useState('4:30 PM - 6:00 PM');
@@ -83,7 +83,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
         setMenuData(res);
       }
     } catch {
-      // fallback
+      // handled
     } finally {
       setLoading(false);
     }
@@ -145,6 +145,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
 
   return (
     <div className="daily-menu-manager" style={{ marginTop: '0.5rem' }}>
+      {/* Toast Notification */}
       {toastMsg && (
         <div
           style={{
@@ -166,6 +167,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
         </div>
       )}
 
+      {/* Header bar */}
       <div
         style={{
           background: '#ffffff',
@@ -198,6 +200,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
             onClick={loadMenu}
             className="btn btn-secondary btn-sm"
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            title="Refresh from server"
           >
             <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
           </button>
@@ -211,6 +214,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
         </div>
       </div>
 
+      {/* 4 Sessions Cards Grid */}
       <div
         style={{
           display: 'grid',
@@ -242,9 +246,11 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                 justifyContent: 'space-between',
                 boxShadow: '3px 4px 0px #283e2e',
                 position: 'relative',
+                transition: 'all 0.18s ease',
               }}
             >
               <div>
+                {/* Session Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <div
@@ -285,6 +291,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                   </span>
                 </div>
 
+                {/* Serving Window & Deadline */}
                 <div
                   style={{
                     display: 'flex',
@@ -307,6 +314,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                   <div><strong>Cutoff:</strong> {deadline}</div>
                 </div>
 
+                {/* Current Menu Content */}
                 <div style={{ marginBottom: '1rem' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#748879' }}>
                     Current Menu Items
@@ -329,6 +337,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                   </div>
                 </div>
 
+                {/* Active Add-On Badges */}
                 {addons.length > 0 && (
                   <div style={{ marginBottom: '1rem' }}>
                     {addons.map((a) => (
@@ -355,6 +364,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                 )}
               </div>
 
+              {/* Card Footer: Live RSVPs & Action Buttons */}
               <div>
                 <div
                   style={{
@@ -395,6 +405,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
         })}
       </div>
 
+      {/* Push / Edit Modal */}
       {showModal && (
         <div
           style={{
@@ -447,6 +458,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
             </div>
 
             <form onSubmit={handleSubmit}>
+              {/* 1. Meal Session Selector */}
               <div style={{ marginBottom: '1.15rem' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#283e2e', marginBottom: '0.45rem' }}>
                   Target Meal Session
@@ -479,7 +491,10 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                           gap: '0.2rem',
                         }}
                       >
-                        <span>{sKey === 'breakfast' ? '🌅' : sKey === 'lunch' ? '☀️' : sKey === 'snacks' ? '☕' : '🌙'}</span>
+                        {(() => {
+                          const SIcon = SESSION_META[sKey]?.icon || Utensils;
+                          return <SIcon size={16} color={isSelected ? '#1d3324' : '#55685a'} />;
+                        })()}
                         <span>{sKey.slice(0, 1).toUpperCase() + sKey.slice(1)}</span>
                       </button>
                     );
@@ -487,6 +502,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                 </div>
               </div>
 
+              {/* 2. Mode: Append (+) or Replace Full */}
               <div style={{ marginBottom: '1.15rem' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#283e2e', marginBottom: '0.45rem' }}>
                   Operation Type
@@ -527,6 +543,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                 </div>
               </div>
 
+              {/* 3. Dish Content Input */}
               <div style={{ marginBottom: '1.15rem' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#283e2e', marginBottom: '0.35rem' }}>
                   {modalMode === 'push' ? 'Dish Name to Push' : 'Full Menu Dish Listing'}
@@ -554,6 +571,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                 />
               </div>
 
+              {/* 4. Serving Hours & Deadline */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#283e2e', marginBottom: '0.3rem' }}>
@@ -595,6 +613,7 @@ const DailyMenuManager = ({ onMenuPushed }) => {
                 </div>
               </div>
 
+              {/* Submit Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
                 <button
                   type="button"

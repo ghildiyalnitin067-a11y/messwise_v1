@@ -937,14 +937,12 @@ class AnalyticsService:
 
         # Inference Latency Across Architectures
         latency_comparison_chart = [
-            {"model": "Legacy Rule-Based Engine", "avg_latency_ms": 0.08, "p95_latency_ms": 0.12, "mae_meals": 48.2},
             {"model": "Random Forest Regressor", "avg_latency_ms": 1.45, "p95_latency_ms": 2.10, "mae_meals": 18.4},
             {"model": "Active XGBoost Regressor", "avg_latency_ms": 0.48, "p95_latency_ms": 0.66, "mae_meals": 15.57}
         ]
 
         # Energy Consumption Per Inference Benchmarks
         energy_consumption_benchmarks = [
-            {"model": "Legacy Rule-Based", "energy_per_inference_uwh": 0.42, "energy_per_inference_mwh": 0.00042, "latency_p95_ms": 0.12, "accuracy_pct": 89.2, "mae_meals": 48.2},
             {"model": "Random Forest Regressor", "energy_per_inference_uwh": 8.75, "energy_per_inference_mwh": 0.00875, "latency_p95_ms": 2.10, "accuracy_pct": 94.6, "mae_meals": 18.4},
             {"model": "Active XGBoost Regressor", "energy_per_inference_uwh": 2.75, "energy_per_inference_mwh": 0.00275, "latency_p95_ms": 0.66, "accuracy_pct": 96.81, "mae_meals": 15.57}
         ]

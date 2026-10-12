@@ -18,7 +18,8 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  Zap
+  Zap,
+  Leaf
 } from 'lucide-react';
 import { adminApi } from '../api/client';
 
@@ -245,12 +246,26 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
 
   const convertReqToDispatch = (req) => {
     if (!req) return null;
+    const existing = INITIAL_GREENROUTE_DISPATCHES.find(
+      (d) =>
+        (req.surplus_id && d.surplusId === req.surplus_id) ||
+        (req.otp && d.otp === req.otp) ||
+        (req.id && (d.id === req.id || d.surplusId === req.id))
+    );
+
     const plateMatch = (req.vehicle || '').match(/\(([^)]+)\)/);
-    const licensePlate = plateMatch ? plateMatch[1] : 'DL 3S PR 9021';
-    const riderName = req.volunteer_name || 'Assigned Rider';
-    const dispId = req.id?.startsWith('GR-DISP-')
-      ? req.id
-      : `GR-DISP-${(req.id || 'REQ').slice(-6).toUpperCase()}`;
+    const licensePlate = plateMatch ? plateMatch[1] : (existing?.rider?.licensePlate || 'DL 3S PR 9021');
+    const riderName = req.volunteer_name || existing?.rider?.name || 'Assigned Rider';
+    const dispId = existing ? existing.id : (req.id?.startsWith('GR-DISP-') ? req.id : `GR-DISP-${(req.id || 'REQ').replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase()}`);
+
+    if (existing) {
+      return {
+        ...existing,
+        otpVerified: req.status === 'Collected' || existing.otpVerified,
+        status: req.status === 'Collected' ? 'handed_over' : existing.status,
+        etaMinutes: req.status === 'Collected' ? 0 : existing.etaMinutes,
+      };
+    }
 
     return {
       id: dispId,
@@ -264,8 +279,8 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       hostel: req.hostel || 'Hostel A (Aryabhatta)',
       pickupLocation: 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
       pickup_location: 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
-      targetNgo: 'Helping Hands NGO',
-      target_ngo: 'Helping Hands NGO',
+      targetNgo: 'Robin Hood Army & Jan Seva Shelter',
+      target_ngo: 'Robin Hood Army & Jan Seva Shelter',
       distanceKm: 1.2,
       distance_km: 1.2,
       platform: 'Blinkit',
@@ -292,7 +307,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       etaMinutes: req.status === 'Collected' ? 0 : 3,
       eta_minutes: req.status === 'Collected' ? 0 : 3,
       timeline: [
-        { step: 'searching', title: 'Searching Partner', desc: 'Broadcast matched with Helping Hands NGO', time: 'Just now' },
+        { step: 'searching', title: 'Searching Partner', desc: 'Broadcast matched with Robin Hood Army & Jan Seva Shelter', time: 'Just now' },
         { step: 'assigned', title: 'Rider Assigned', desc: `${riderName} confirmed dispatch order`, time: 'Just now' },
         { step: 'arriving', title: 'Arriving at Mess', desc: `Approaching Mess Dispatch Bay 2 (${req.pickup_time_estimated || 'Within 15 mins'})`, time: 'In transit' },
         { step: 'handed_over', title: 'Food Handed Over / En Route', desc: req.status === 'Collected' ? 'Handover completed' : 'Pending OTP handover verification', time: req.status === 'Collected' ? 'Verified' : 'Est. in 10 mins' },
@@ -334,8 +349,8 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       hostel: item.hostel || 'Hostel A (Aryabhatta)',
       pickupLocation: item.pickupLocation || item.pickup_location || 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
       pickup_location: item.pickupLocation || item.pickup_location || 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
-      targetNgo: item.targetNgo || item.target_ngo || 'Helping Hands NGO',
-      target_ngo: item.targetNgo || item.target_ngo || 'Helping Hands NGO',
+      targetNgo: item.targetNgo || item.target_ngo || 'Robin Hood Army & Jan Seva Shelter',
+      target_ngo: item.targetNgo || item.target_ngo || 'Robin Hood Army & Jan Seva Shelter',
       distanceKm: item.distanceKm ?? item.distance_km ?? 1.2,
       distance_km: item.distanceKm ?? item.distance_km ?? 1.2,
       etaMinutes: item.etaMinutes ?? item.eta_minutes ?? 3,
@@ -359,7 +374,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
     };
   };
 
-  // Load from backend API, ngoRequests prop, and localStorage, with live event synchronization
+  // Load from backend API and localStorage, with live event synchronization
   useEffect(() => {
     let isMounted = true;
 
@@ -370,7 +385,8 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
         const allReqs = [...(Array.isArray(ngoRequests) ? ngoRequests : []), ...(Array.isArray(localReqs) ? localReqs : [])];
         const reqDispatches = allReqs
           .filter(r => r && r.volunteer_name)
-          .map(convertReqToDispatch);
+          .map(convertReqToDispatch)
+          .filter(Boolean);
 
         setDispatches((prev) => {
           const combined = [
@@ -382,17 +398,43 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
           ];
           const map = new Map();
           combined.forEach((raw) => {
-            if (raw && raw.id && !map.has(raw.id)) {
-              map.set(raw.id, normalizeDispatch(raw));
+            if (!raw) return;
+            const norm = normalizeDispatch(raw);
+            if (!norm || !norm.id) return;
+
+            const canonMatch = INITIAL_GREENROUTE_DISPATCHES.find(
+              (d) =>
+                d.id === norm.id ||
+                d.surplusId === (norm.surplusId || norm.surplus_id) ||
+                (norm.otp && d.otp === norm.otp)
+            );
+            const dedupeKey = canonMatch
+              ? canonMatch.id
+              : (norm.surplusId || norm.surplus_id || norm.otp || norm.id);
+
+            if (!map.has(dedupeKey)) {
+              const finalItem = canonMatch ? { ...canonMatch, ...norm, id: canonMatch.id } : norm;
+              map.set(dedupeKey, finalItem);
+            } else {
+              const current = map.get(dedupeKey);
+              if (norm.status === 'handed_over' || norm.otpVerified) {
+                map.set(dedupeKey, {
+                  ...current,
+                  ...norm,
+                  id: current.id,
+                  status: 'handed_over',
+                  otpVerified: true,
+                  etaMinutes: 0
+                });
+              }
             }
           });
           const list = Array.from(map.values());
-
           if (forceSelectId && map.has(forceSelectId)) {
             setSelectedId(forceSelectId);
           } else if (list.length > 0) {
             setSelectedId((cur) => {
-              if (!cur || cur === 'GR-DISP-896' || !map.has(cur)) {
+              if (!cur || !list.some(d => d.id === cur)) {
                 return list[0].id;
               }
               return cur;
@@ -436,7 +478,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
           ) {
             if (event.data?.dispatch) {
               const normalized = normalizeDispatch(event.data.dispatch);
-              setDispatches((prev) => [normalized, ...prev.filter(d => d.id !== normalized.id)]);
+              setDispatches((prev) => [normalized, ...prev.filter((d) => d.id !== normalized.id)]);
               setSelectedId(normalized.id);
             }
             fetchDispatches();
@@ -447,10 +489,13 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       }
     } catch {}
 
+    const handleFocus = () => fetchDispatches();
+    window.addEventListener('focus', handleFocus);
+
     const handleCustomUpdate = (e) => {
       if (e?.detail) {
         const normalized = normalizeDispatch(e.detail);
-        setDispatches((prev) => [normalized, ...prev.filter(d => d.id !== normalized.id)]);
+        setDispatches((prev) => [normalized, ...prev.filter((d) => d.id !== normalized.id)]);
         setSelectedId(normalized.id);
       }
     };
@@ -461,19 +506,16 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       }
     };
 
-    const handleFocus = () => fetchDispatches();
-
     window.addEventListener('messwise-dispatch-updated', handleCustomUpdate);
     window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('focus', handleFocus);
 
     return () => {
       isMounted = false;
       clearInterval(pollInterval);
       if (bc) bc.close();
+      window.removeEventListener('focus', handleFocus);
       window.removeEventListener('messwise-dispatch-updated', handleCustomUpdate);
       window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('focus', handleFocus);
     };
   }, [ngoRequests]);
 
@@ -498,6 +540,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
               )
             };
           } else if (disp.status === 'searching') {
+            // Auto match after search
             return {
               ...disp,
               status: 'assigned',
@@ -600,6 +643,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       )
     );
 
+    // Call backend API if connected
     if (adminApi && typeof adminApi.verifyGreenRouteOtp === 'function') {
       adminApi.verifyGreenRouteOtp(currentDispatch.id, currentDispatch.otp).catch(() => {});
     }
@@ -624,7 +668,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       case 'Zepto':
         return {
           className: 'platform-badge platform-badge-zepto',
-          text: '🟣 Zepto Express Rescue',
+          text: 'Zepto Express Rescue',
           dotColor: '#9333ea',
           brandColor: '#8023EB',
           textColor: '#FFFFFF'
@@ -632,7 +676,7 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
       case 'Instamart':
         return {
           className: 'platform-badge platform-badge-instamart',
-          text: '🟠 Instamart Quick Rescue',
+          text: 'Instamart Quick Rescue',
           dotColor: '#ea580c',
           brandColor: '#FC8019',
           textColor: '#FFFFFF'
@@ -746,13 +790,12 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                   }} 
                 />
                 <span className="font-bold">[{disp.platform}]</span>
-                <span className="font-mono text-slate-500">{disp.id}</span>
-                <span className="text-slate-300">•</span>
-                <span>{(disp.batchTitle || disp.batch_title || 'Batch').split(' ')[0]} ({disp.portions}m)</span>
-                <span className="text-slate-300">•</span>
-                <span className="inline-flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-300">
-                  <Bike size={11} /> {disp.rider?.name || 'Rider'}
+                <span className="font-semibold text-emerald-900 bg-emerald-100/90 px-1.5 py-0.5 rounded text-[11px] flex items-center gap-1">
+                  <Bike size={12} className="text-emerald-700" /> {disp.rider?.name || 'Rider'}
                 </span>
+                <span className="font-mono text-slate-400 text-[11px]">{disp.id}</span>
+                <span className="text-slate-300">•</span>
+                <span>{(disp.batchTitle || disp.batch_title || 'Batch').split(' ')[0]} ({disp.portions} meals)</span>
                 {disp.status === 'arriving' && (
                   <span className="text-[11px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-bold">
                     {disp.etaMinutes}m ETA
@@ -935,9 +978,12 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                         <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', backgroundColor: '#dcfce7', color: '#166534', fontWeight: 700, borderRadius: 'var(--radius-xs)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                           <ShieldCheck size={12} /> Verified
                         </span>
+                        <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', backgroundColor: 'var(--brand-900)', color: '#ffffff', fontWeight: 600, borderRadius: 'var(--radius-full)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Check size={11} /> Assigned Rider
+                        </span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                        Rider ID: <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{currentDispatch.rider.id}</strong> • {currentDispatch.rider.totalDeliveries}+ deliveries
+                        Rider ID: <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{currentDispatch.rider.id}</strong> • Assigned for <strong style={{ color: 'var(--text-primary)' }}>{currentDispatch.targetNgo}</strong>
                       </div>
                     </div>
                   </div>
@@ -994,7 +1040,9 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>Category: {currentDispatch.rider.vehicleCategory}</span>
                       <span style={{ display: 'inline-block', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--border-default)' }} />
-                      <span style={{ color: 'var(--brand-700)', fontWeight: 600 }}>🌱 Zero Emission Fleet</span>
+                      <span style={{ color: 'var(--brand-700)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Leaf size={12} color="#047857" /> Zero Emission Fleet
+                      </span>
                     </div>
                   </div>
 
@@ -1110,7 +1158,9 @@ const GreenRouteTracker = ({ onHandoverSuccess, ngoRequests = [] }) => {
                 {currentDispatch.status !== 'handed_over' ? (
                   <div className="gr-sim-box">
                     <div className="gr-sim-header">
-                      <span className="gr-sim-badge">🧪 Quick Gate Simulation / Test Handover</span>
+                      <span className="gr-sim-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Zap size={13} color="#f59e0b" /> Quick Gate Simulation / Test Handover
+                      </span>
                       <span style={{ fontSize: '0.72rem', color: '#fef08a' }}>Demo Mode Active</span>
                     </div>
                     <p className="gr-sim-desc">

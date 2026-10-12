@@ -56,11 +56,11 @@ const LoginPage = () => {
       await handleLogin(role, credentials);
       if (role === 'student') {
         sessionStorage.setItem('messwise_prompt_pref', 'true');
-        window.location.href = 'http://localhost:3001';
+        window.location.href = import.meta.env.VITE_STUDENT_PORTAL_URL || '/student';
       } else if (role === 'admin') {
-        window.location.href = 'http://localhost:3002';
+        window.location.href = import.meta.env.VITE_ADMIN_PORTAL_URL || '/admin';
       } else if (role === 'ngo') {
-        window.location.href = 'http://localhost:3003';
+        window.location.href = import.meta.env.VITE_NGO_PORTAL_URL || '/ngo';
       }
     } catch (err) {
       const msg = err?.response?.data?.detail || err?.detail || err?.message || 'Authentication failed. Please verify your credentials.';

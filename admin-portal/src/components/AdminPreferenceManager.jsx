@@ -13,7 +13,9 @@ import {
   Scissors,
   Check,
   ChevronRight,
-  Sliders
+  Sliders,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { preferenceApi } from '../api/client';
 
@@ -144,8 +146,8 @@ const AdminPreferenceManager = ({ onMenuOptimized }) => {
         {/* Session Toggle */}
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           {[
-            { id: 'lunch', label: 'Lunch', icon: '☀️' },
-            { id: 'dinner', label: 'Dinner', icon: '🌙' },
+            { id: 'lunch', label: 'Lunch', Icon: Sun },
+            { id: 'dinner', label: 'Dinner', Icon: Moon },
           ].map((sess) => (
             <button
               key={sess.id}
@@ -166,7 +168,7 @@ const AdminPreferenceManager = ({ onMenuOptimized }) => {
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>{sess.icon}</span>
+              <sess.Icon size={14} />
               <span>{sess.label}</span>
             </button>
           ))}

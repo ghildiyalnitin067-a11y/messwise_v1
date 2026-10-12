@@ -28,8 +28,24 @@ const MlPerformanceAnalyticsTab = ({ data, loading }) => {
     mae_by_meal_type = [],
     prediction_error_trend = [],
     latency_comparison = [],
-    waste_outcomes_vs_accuracy = []
+    waste_outcomes_vs_accuracy = [],
+    energy_consumption_benchmarks = []
   } = data;
+
+  const filteredLatencyComparison = (latency_comparison || []).filter(
+    (m) => !m.model?.toLowerCase().includes('legacy') && !m.model?.toLowerCase().includes('rule')
+  );
+
+  const filteredEnergyBenchmarks = (
+    energy_consumption_benchmarks.length > 0
+      ? energy_consumption_benchmarks
+      : [
+          { model: "Random Forest Regressor", energy_per_inference_uwh: 8.75 },
+          { model: "Active XGBoost Regressor", energy_per_inference_uwh: 2.75 }
+        ]
+  ).filter(
+    (m) => !m.model?.toLowerCase().includes('legacy') && !m.model?.toLowerCase().includes('rule')
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -161,11 +177,7 @@ const MlPerformanceAnalyticsTab = ({ data, loading }) => {
           </div>
           <div className="panel-body" style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.energy_consumption_benchmarks || [
-                { model: "Legacy Rule-Based", energy_per_inference_uwh: 0.42 },
-                { model: "Random Forest Regressor", energy_per_inference_uwh: 8.75 },
-                { model: "Active XGBoost Regressor", energy_per_inference_uwh: 2.75 }
-              ]}>
+              <BarChart data={filteredEnergyBenchmarks}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="model" tick={{ fontSize: 10 }} />
                 <YAxis unit=" µWh" tick={{ fontSize: 11 }} />
@@ -188,7 +200,7 @@ const MlPerformanceAnalyticsTab = ({ data, loading }) => {
           </div>
           <div className="panel-body" style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={latency_comparison}>
+              <BarChart data={filteredLatencyComparison}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="model" tick={{ fontSize: 10 }} />
                 <YAxis unit=" ms" tick={{ fontSize: 11 }} />
