@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('messwise_jwt_token');
+  const token = localStorage.getItem('messwise_jwt_token') || 'mock-admin-token-2025';
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -241,6 +241,11 @@ export const adminApi = {
       return { success: true, message: 'Handover verified' };
     }
   },
+  getNgoRequests: async () => {
+    try {
+      const res = await api.get('/admin/requests');
+      if (res?.data && Array.isArray(res.data)) return res.data;
+      return null;
   getMenu: async () => {
     try {
       const res = await api.get('/admin/menu');
@@ -249,12 +254,29 @@ export const adminApi = {
       return null;
     }
   },
+  getGreenRouteDispatches: async () => {
+    try {
+      const res = await api.get('/admin/greenroute/dispatches');
+      if (res?.data?.dispatches && Array.isArray(res.data.dispatches)) return res.data.dispatches;
+      if (Array.isArray(res?.data)) return res.data;
+      return null;
   updateMenu: async (data) => {
     try {
       const res = await api.post('/admin/menu', data);
       return res.data;
     } catch {
       return null;
+    }
+  },
+  verifyGreenRouteOtp: async (dispatchId, otp) => {
+    try {
+      const res = await api.post('/admin/greenroute/verify-otp', {
+        dispatch_id: dispatchId,
+        otp,
+      });
+      return res.data;
+    } catch {
+      return { status: 'success', dispatch_id: dispatchId, new_status: 'handed_over' };
     }
   },
 };

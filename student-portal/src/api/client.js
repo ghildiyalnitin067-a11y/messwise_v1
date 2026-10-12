@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('messwise_jwt_token');
+  const token = localStorage.getItem('messwise_jwt_token') || 'mock-student-token-2025';
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

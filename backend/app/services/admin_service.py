@@ -212,16 +212,20 @@ class AdminService:
 
         otp_code = str(random.randint(1000, 9999))
 
+        title = req.title or req.food_title or "Fresh Kitchen Surplus"
+        meals = req.meals or req.meals_available or 25
+        temp = req.temp_celsius if req.temp_celsius is not None else (int(req.storage_temperature) if req.storage_temperature is not None else 65)
+
         surplus = SurplusListing(
             hostel_id=hostel_id,
-            title=req.title,
-            meals=req.meals,
+            title=title,
+            meals=meals,
             location_detail=req.location_detail or f"{hostel.name if hostel else 'Hostel A'} Kitchen Bay, Counter 1",
             distance_km=1.8,
             pickup_deadline=req.pickup_deadline or "5:00 PM",
             time_remaining="2h left",
             status="Published",
-            temp_celsius=req.temp_celsius,
+            temp_celsius=temp,
             storage_condition=req.storage_condition or "Insulated Stainless Steel Warmer",
             food_type=req.food_type or "Cooked Main Course",
             fssai_safety_passed=True,

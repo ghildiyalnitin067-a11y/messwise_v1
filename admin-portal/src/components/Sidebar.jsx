@@ -6,6 +6,7 @@ import {
   Sparkles, 
   ShieldCheck, 
   LogOut,
+  Bike
   Boxes,
   Trophy,
   Utensils,
@@ -42,6 +43,14 @@ const Sidebar = ({ activeTab, onTabChange }) => {
         </button>
 
         <button
+          className={`nav-item ${activeTab === 'greenroute' ? 'active' : ''}`}
+          onClick={() => onTabChange('greenroute')}
+        >
+          <div className="nav-label">
+            <Bike size={16} />
+            <span>GreenRoute Fleet</span>
+          </div>
+          <span className="nav-badge">Live</span>
           className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
           onClick={() => onTabChange('analytics')}
         >

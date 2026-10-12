@@ -15,6 +15,7 @@ import {
   Layers,
   User,
   History,
+  Bike
   Trophy,
   Droplets,
   ThumbsUp
@@ -37,6 +38,7 @@ const Sidebar = ({ role = 'student', activeTab, onTabChange }) => {
 
   const adminMain = [
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
+    { id: 'greenroute', label: 'GreenRoute Dispatches', icon: Bike, badge: 'Live' },
     { id: 'preferences', label: 'Student Preferences', icon: ThumbsUp, badge: 'Zero-Waste' },
     { id: 'menu', label: 'Daily Menu Operations', icon: Utensils, badge: 'Live Sync' },
     { id: 'production', label: 'Batch Production Logs', icon: ChefHat },

@@ -3,6 +3,14 @@ import { authApi, studentApi, adminApi, ngoApi } from '../api/client';
 
 const MesswiseContext = createContext(null);
 
+export const INITIAL_PRODUCTION_LOGS = [
+  { id: 'prod-seed-1', date: 'Today (Lunch)', menu: 'Rajma + Steamed Rice + Roti', p: 842, s: 817, sur: 25, w: 6.0, prepared: 842, served: 817, surplus: 25, waste: 6.0, status: 'Completed', isSurplus: false },
+  { id: 'prod-seed-2', date: 'Today (Breakfast)', menu: 'Poha + Milk + Banana', p: 480, s: 472, sur: 8, w: 2.2, prepared: 480, served: 472, surplus: 8, waste: 2.2, status: 'Completed', isSurplus: false },
+  { id: 'prod-seed-3', date: 'Yesterday (Dinner)', menu: 'Dal Tadka + Roti + Rice', p: 610, s: 598, sur: 12, w: 4.8, prepared: 610, served: 598, surplus: 12, waste: 4.8, status: 'Completed', isSurplus: false },
+  { id: 'prod-seed-4', date: 'Yesterday (Lunch)', menu: 'Chole Bhature + Rice', p: 820, s: 795, sur: 25, w: 7.4, prepared: 820, served: 795, surplus: 25, waste: 7.4, status: 'Completed', isSurplus: false },
+  { id: 'prod-seed-5', date: '14 Sep (Dinner)', menu: 'Veg Pulao + Kadhi', p: 580, s: 565, sur: 15, w: 3.9, prepared: 580, served: 565, surplus: 15, waste: 3.9, status: 'Completed', isSurplus: false },
+];
+
 export const MesswiseProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState({
     id: 'usr-student-01',
@@ -114,15 +122,60 @@ export const MesswiseProvider = ({ children }) => {
     co2DivertedKg: 648,
   });
 
+  const [greenrouteDispatches, setGreenrouteDispatches] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('messwise_greenroute_dispatches') || '[]');
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch {}
+    return [];
+  });
+
+  const [productionLogs, setProductionLogs] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('messwise_production_logs') || '[]');
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch {}
+    return INITIAL_PRODUCTION_LOGS;
+  });
+
+  const recordProductionLog = useCallback((logEntry) => {
+    const entry = {
+      id: logEntry.id || `prod-${Date.now()}`,
+      date: logEntry.date || `Today (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+      menu: logEntry.menu || 'Daily Batch Menu',
+      prepared: Number(logEntry.prepared ?? logEntry.p) || 0,
+      served: Number(logEntry.served ?? logEntry.s) || 0,
+      surplus: Number(logEntry.surplus ?? logEntry.sur) || 0,
+      waste: Number(logEntry.waste ?? logEntry.w) || 0,
+      p: Number(logEntry.prepared ?? logEntry.p) || 0,
+      s: Number(logEntry.served ?? logEntry.s) || 0,
+      sur: Number(logEntry.surplus ?? logEntry.sur) || 0,
+      w: Number(logEntry.waste ?? logEntry.w) || 0,
+      status: logEntry.status || 'Active Log',
+      isSurplus: Boolean(logEntry.isSurplus),
+      surplusId: logEntry.surplusId || null,
+      notes: logEntry.notes || '',
+    };
+    setProductionLogs((prev) => {
+      const updated = [entry, ...prev.filter(l => l.id !== entry.id)];
+      try {
+        localStorage.setItem('messwise_production_logs', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    return entry;
+  }, []);
+
   // Fetch initial data from backend API
   const refreshData = useCallback(async () => {
     try {
-      const [userRes, mealsRes, adminRes, surplusRes, requestsRes] = await Promise.allSettled([
+      const [userRes, mealsRes, adminRes, surplusRes, requestsRes, dispatchesRes] = await Promise.allSettled([
         authApi.getMe(),
         studentApi.getTodayMeals(),
         adminApi.getStats(),
         ngoApi.getAvailableSurplus(),
         ngoApi.getMyRequests(),
+        adminApi.getGreenRouteDispatches(),
       ]);
 
       if (userRes.status === 'fulfilled' && userRes.value) {
@@ -140,9 +193,45 @@ export const MesswiseProvider = ({ children }) => {
       if (requestsRes.status === 'fulfilled' && requestsRes.value?.length) {
         setNgoRequests(requestsRes.value);
       }
+      if (dispatchesRes.status === 'fulfilled' && dispatchesRes.value && Array.isArray(dispatchesRes.value) && dispatchesRes.value.length) {
+        setGreenrouteDispatches(dispatchesRes.value);
+      }
     } catch (e) {
       console.warn('Backend sync failed, using realistic mock cache.', e);
     }
+  }, []);
+
+  useEffect(() => {
+    let bc;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.onmessage = (event) => {
+          if (event.data?.type === 'RIDER_ASSIGNED') {
+            if (event.data?.claim) {
+              setNgoRequests((prev) => [
+                event.data.claim,
+                ...prev.filter((r) => r.id !== event.data.claim.id),
+              ]);
+            }
+            if (event.data?.dispatch) {
+              setGreenrouteDispatches((prev) => [
+                event.data.dispatch,
+                ...prev.filter((d) => d.id !== event.data.dispatch.id),
+              ]);
+            }
+          } else if (event.data?.type === 'HANDOVER_VERIFIED') {
+            setNgoRequests((prev) =>
+              prev.map((r) => (r.id === event.data.requestId ? { ...r, status: 'Collected' } : r))
+            );
+          }
+        };
+      }
+    } catch {}
+
+    return () => {
+      if (bc) bc.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -239,6 +328,38 @@ export const MesswiseProvider = ({ children }) => {
       },
     }));
 
+    // Record immediately into Batch Production Logs!
+    const surplusLog = {
+      id: `prod-surplus-${newItem.id}`,
+      date: `Today (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+      menu: newItem.title,
+      prepared: (Number(newItem.meals) || 20) + 30,
+      served: 30,
+      surplus: Number(newItem.meals) || 20,
+      waste: Number(((Number(newItem.meals) || 20) * 0.04).toFixed(1)),
+      p: (Number(newItem.meals) || 20) + 30,
+      s: 30,
+      sur: Number(newItem.meals) || 20,
+      w: Number(((Number(newItem.meals) || 20) * 0.04).toFixed(1)),
+      status: 'Surplus Queue Active',
+      isSurplus: true,
+      surplusId: newItem.id,
+      notes: `Added from Surplus Food Queue • ${newItem.location_detail} • Pickup by ${newItem.pickup_deadline}`,
+    };
+    recordProductionLog(surplusLog);
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.postMessage({
+          type: 'SURPLUS_PUBLISHED',
+          surplus: newItem,
+          productionLog: surplusLog,
+        });
+        bc.close();
+      }
+    } catch {}
+
     try {
       await adminApi.publishSurplus(newItem);
     } catch (e) {}
@@ -250,6 +371,11 @@ export const MesswiseProvider = ({ children }) => {
     const surplus = surplusListings.find((s) => s.id === surplusId);
     if (!surplus) return;
 
+    const plateMatch = (details.vehicle || '').match(/\(([^)]+)\)/);
+    const licensePlate = plateMatch ? plateMatch[1] : 'DL 3S PR 9021';
+    const riderName = details.volunteer_name || 'Volunteer Driver';
+    const reqOtp = surplus.pickup_otp || '7412';
+
     setSurplusListings((prev) =>
       prev.map((s) => (s.id === surplusId ? { ...s, status: 'Requested', requested_by_ngo: 'Helping Hands NGO' } : s))
     );
@@ -259,22 +385,97 @@ export const MesswiseProvider = ({ children }) => {
       surplus_id: surplus.id,
       food_title: surplus.title,
       meals: surplus.meals,
-      hostel: surplus.hostel,
-      volunteer_name: details.volunteer_name || 'Volunteer Driver',
-      vehicle: details.vehicle || 'Electric Van',
+      hostel: surplus.hostel || 'Hostel A',
+      volunteer_name: riderName,
+      vehicle: details.vehicle || 'Electric Scooter (DL 3S PR 9021)',
       requested_at: 'Just now',
-      status: 'Pending Approval',
-      pickup_time_estimated: details.eta || 'Within 30 mins',
-      otp: surplus.pickup_otp || '7412',
+      status: 'Approved',
+      pickup_time_estimated: details.eta || 'Within 15 mins',
+      otp: reqOtp,
+    };
+
+    const newDispatch = {
+      id: `GR-DISP-${Date.now().toString().slice(-4)}`,
+      surplusId: surplus.id,
+      surplus_id: surplus.id,
+      batchTitle: surplus.title,
+      batch_title: surplus.title,
+      portions: surplus.meals,
+      foodType: surplus.food_type || 'Fresh Cooked Surplus',
+      food_type: surplus.food_type || 'Fresh Cooked Surplus',
+      hostel: surplus.hostel || 'Hostel A (Aryabhatta)',
+      pickupLocation: surplus.location_detail || 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
+      pickup_location: surplus.location_detail || 'Central Mess Dispatch Bay 2 (Gate 4 Ramp)',
+      targetNgo: 'Helping Hands NGO',
+      target_ngo: 'Helping Hands NGO',
+      distanceKm: surplus.distance_km || 1.2,
+      distance_km: surplus.distance_km || 1.2,
+      platform: 'Blinkit',
+      platformTag: 'Blinkit Instant Dispatch',
+      platformBrandColor: '#F8CB46',
+      platformTextColor: '#0F172A',
+      rider: {
+        id: `RDR-${Math.floor(100 + Math.random() * 899)}`,
+        name: riderName,
+        phone: '+91 98450 12345',
+        rating: 4.95,
+        totalDeliveries: 1120,
+        avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+        vehicleType: details.vehicle || 'Electric Scooter (DL 3S PR 9021)',
+        vehicle_type: details.vehicle || 'Electric Scooter (DL 3S PR 9021)',
+        licensePlate: licensePlate,
+        license_plate: licensePlate,
+        batteryPercent: 92,
+        battery_percent: 92,
+      },
+      otp: reqOtp,
+      otpVerified: false,
+      status: 'arriving',
+      etaMinutes: 3,
+      eta_minutes: 3,
+      timeline: [
+        { step: 'searching', title: 'Searching Partner', desc: 'Broadcast matched with Helping Hands NGO', time: 'Just now' },
+        { step: 'assigned', title: 'Rider Assigned', desc: `${riderName} confirmed dispatch order`, time: 'Just now' },
+        { step: 'arriving', title: 'Arriving at Mess', desc: `Approaching Mess Dispatch Bay 2 (${details.eta || 'Within 15 mins'})`, time: 'In transit' },
+        { step: 'handed_over', title: 'Food Handed Over / En Route', desc: 'Pending OTP handover verification', time: 'Est. in 10 mins' },
+      ],
+      temperatureLogged: `${surplus.temp_celsius || 68}°C (Insulated Casseroles)`,
+      pickupDeadline: surplus.pickup_deadline || '5:00 PM',
     };
 
     setNgoRequests((prev) => [newReq, ...prev]);
+    setGreenrouteDispatches((prev) => [newDispatch, ...prev]);
+
+    try {
+      const existingDispatches = JSON.parse(localStorage.getItem('messwise_greenroute_dispatches') || '[]');
+      localStorage.setItem('messwise_greenroute_dispatches', JSON.stringify([newDispatch, ...existingDispatches.filter(d => d.id !== newDispatch.id)]));
+
+      const existingReqs = JSON.parse(localStorage.getItem('messwise_ngo_requests') || '[]');
+      localStorage.setItem('messwise_ngo_requests', JSON.stringify([newReq, ...existingReqs.filter(r => r.id !== newReq.id)]));
+
+      window.dispatchEvent(new CustomEvent('messwise-dispatch-updated', { detail: newDispatch }));
+    } catch {}
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.postMessage({
+          type: 'RIDER_ASSIGNED',
+          claim: newReq,
+          dispatch: newDispatch,
+          riderName: riderName,
+          vehicle: details.vehicle,
+          surplusId: surplus.id,
+        });
+        bc.close();
+      }
+    } catch {}
 
     try {
       await ngoApi.requestSurplus(surplusId, details);
     } catch (e) {}
 
-    return newReq;
+    return { ...newReq, dispatch: newDispatch };
   };
 
   const approveRequest = async (requestId) => {
@@ -301,6 +502,45 @@ export const MesswiseProvider = ({ children }) => {
     setSurplusListings((prev) =>
       prev.map((s) => (s.id === req.surplus_id ? { ...s, status: 'PickedUp' } : s))
     );
+
+    setGreenrouteDispatches((prev) =>
+      prev.map((d) =>
+        (d.surplusId === req.surplus_id || d.id === req.id || d.otp === req.otp)
+          ? { ...d, status: 'handed_over', otpVerified: true, etaMinutes: 0 }
+          : d
+      )
+    );
+
+    try {
+      const localDisps = JSON.parse(localStorage.getItem('messwise_greenroute_dispatches') || '[]');
+      const updatedDisps = localDisps.map((d) =>
+        (d.surplusId === req.surplus_id || d.id === req.id || d.otp === req.otp)
+          ? { ...d, status: 'handed_over', otpVerified: true, etaMinutes: 0 }
+          : d
+      );
+      localStorage.setItem('messwise_greenroute_dispatches', JSON.stringify(updatedDisps));
+
+      const localReqs = JSON.parse(localStorage.getItem('messwise_ngo_requests') || '[]');
+      const updatedReqs = localReqs.map((r) => (r.id === requestId ? { ...r, status: 'Collected' } : r));
+      localStorage.setItem('messwise_ngo_requests', JSON.stringify(updatedReqs));
+
+      window.dispatchEvent(new CustomEvent('messwise-dispatch-updated', {
+        detail: { id: req.id, surplusId: req.surplus_id, status: 'handed_over', otpVerified: true }
+      }));
+    } catch {}
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('messwise-surplus-channel');
+        bc.postMessage({
+          type: 'HANDOVER_VERIFIED',
+          requestId,
+          surplusId: req.surplus_id,
+          otp,
+        });
+        bc.close();
+      }
+    } catch {}
 
     try {
       await adminApi.verifyHandover(requestId, otp);
@@ -354,6 +594,11 @@ export const MesswiseProvider = ({ children }) => {
         surplusListings,
         ngoRequests,
         ngoStats,
+        greenrouteDispatches,
+        setGreenrouteDispatches,
+        productionLogs,
+        setProductionLogs,
+        recordProductionLog,
         toggleMealBooking,
         publishSurplus,
         requestSurplus,
