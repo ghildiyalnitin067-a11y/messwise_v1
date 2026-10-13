@@ -1,8 +1,6 @@
 import React from 'react';
 import { 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   BarChart, 
   Bar, 
   XAxis, 
@@ -88,79 +86,55 @@ const CarbonEnergyAnalyticsTab = ({ data, loading }) => {
         </div>
       </div>
 
-      {/* Row 1: Monthly Emissions Avoided (Line) & Source Contribution Stack (Bar) */}
+      {/* Basic Comparison Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
         
-        {/* Chart 1: Monthly Estimated Emissions Avoided */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <Leaf size={16} />
-              <span>Monthly Estimated Net Emissions Avoided (kg CO₂e)</span>
-            </div>
-            <span className="badge badge-success">Clean Air Credits</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthly_emissions_trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis unit="kg" tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="food_waste_co2_avoided" name="Food Waste Landfill Avoidance" stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="uco_recycling_co2_avoided" name="UCO Biofuel Repurposing" stroke="#15803d" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 2: Stacked Bar Chart: Contributions from Food vs Oil */}
+        {/* Chart 1: Comparison of Avoided Carbon Benefits */}
         <div className="panel" style={{ marginBottom: 0 }}>
           <div className="panel-header">
             <div className="panel-header-title">
               <ShieldCheck size={16} />
-              <span>Environmental Benefit Source Contribution</span>
+              <span>Environmental Benefit Source Contribution (Basic Comparison)</span>
             </div>
-            <span className="badge badge-neutral">Proportion Stack</span>
+            <span className="badge badge-success">Direct Comparison</span>
           </div>
           <div className="panel-body" style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={contribution_stack} layout="vertical">
+              <BarChart data={contribution_stack}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" unit="kg" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="source" width={180} tick={{ fontSize: 10 }} />
+                <XAxis dataKey="source" tick={{ fontSize: 10 }} />
+                <YAxis unit="kg" tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="co2_avoided_kg" name="Avoided CO₂e (kg)" fill="#059669" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="co2_avoided_kg" name="Avoided CO₂e (kg)" fill="#059669" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-      </div>
-
-      {/* Row 2: Operational ML Emissions vs Avoided Savings (Bar Chart) */}
-      <div className="panel" style={{ marginBottom: 0 }}>
-        <div className="panel-header">
-          <div className="panel-header-title">
-            <Zap size={16} />
-            <span>Operational ML Energy Footprint vs Clean Air Savings Balance</span>
+        {/* Chart 2: Operational ML Emissions vs Avoided Savings (Bar Chart) */}
+        <div className="panel" style={{ marginBottom: 0 }}>
+          <div className="panel-header">
+            <div className="panel-header-title">
+              <Zap size={16} />
+              <span>Operational ML Compute vs Net Clean Air Savings Balance</span>
+            </div>
+            <span className="badge badge-success">Net Carbon Positive</span>
           </div>
-          <span className="badge badge-success">Net Carbon Positive (99.99%)</span>
+          <div className="panel-body" style={{ height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={operational_vs_avoided}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                <YAxis unit="kg" tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="kg_co2e" name="Mass (kg CO₂e)" fill="#0f766e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="panel-body" style={{ height: '260px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={operational_vs_avoided}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-              <YAxis unit="kg" tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="kg_co2e" name="Mass (kg CO₂e)" fill="#0f766e" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+
       </div>
 
       {/* Row 3: Emission Factors & Life-Cycle Accounting Documentation Table */}

@@ -154,58 +154,6 @@ const NgoRedistributionAnalyticsTab = ({ data, loading }) => {
 
       </div>
 
-      {/* Row 2: Transaction Status Breakdown & Average Pickup Time Trend */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
-        
-        {/* Chart 3: Stacked Bar Chart: Pending, Accepted, Collected, Delivered */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <ShieldCheck size={16} />
-              <span>Redistribution Transaction Status Audit</span>
-            </div>
-            <span className="badge badge-neutral">Lifecycle Stages</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={transaction_status_breakdown} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="status" width={180} tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="count" name="Verified Transactions" fill="#0d9488" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 4: Line Chart: Average Pickup Completion Time */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <Clock size={16} />
-              <span>Average Pickup Response Time (Minutes)</span>
-            </div>
-            <span className="badge badge-success">Target: &lt; 45 Mins</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={pickup_completion_time_trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis unit="m" tick={{ fontSize: 11 }} domain={[20, 60]} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="average_pickup_mins" name="Avg Completion Time (Mins)" stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="sla_target_mins" name="SLA Target (45 mins)" stroke="#ef4444" strokeDasharray="5 5" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-      </div>
-
       {/* Row 3: Table: NGO Partners Detailed Records */}
       <div className="panel" style={{ marginBottom: 0 }}>
         <div className="panel-header">

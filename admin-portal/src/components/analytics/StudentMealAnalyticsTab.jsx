@@ -1,8 +1,6 @@
 import React from 'react';
 import { 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   BarChart, 
   Bar, 
   XAxis, 
@@ -36,30 +34,29 @@ const StudentMealAnalyticsTab = ({ data, loading }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-      {/* Row 1: Daily Bookings Trend & Session Demand Comparison */}
+      {/* Basic Comparison Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
         
-        {/* Chart 1: Daily Meal Bookings Over Time */}
+        {/* Chart 1: Grouped Bar Chart: Predicted vs Actual */}
         <div className="panel" style={{ marginBottom: 0 }}>
           <div className="panel-header">
             <div className="panel-header-title">
-              <Calendar size={16} />
-              <span>Daily Meal Bookings & RSVPs Over Time</span>
+              <TrendingUp size={16} />
+              <span>Predicted vs Actual Meal Attendance (Basic Comparison)</span>
             </div>
-            <span className="badge badge-neutral">Line Trend</span>
+            <span className="badge badge-success">Direct Comparison</span>
           </div>
           <div className="panel-body" style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={daily_bookings_trend}>
+              <BarChart data={predicted_vs_actual}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="total_bookings" name="Total Bookings" stroke="#0369a1" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="confirmed_served" name="Confirmed / Served" stroke="#15803d" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="opted_out_cancelled" name="Opted Out / Cancelled" stroke="#b45309" strokeWidth={1.5} dot={{ r: 2 }} />
-              </LineChart>
+                <Bar dataKey="predicted_demand" name="ML Predicted Demand" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual_attendance" name="Actual Attendance" fill="#059669" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -90,135 +87,26 @@ const StudentMealAnalyticsTab = ({ data, loading }) => {
 
       </div>
 
-      {/* Row 2: Predicted vs Actual Demand (Grouped Bar) & RSVP/Confirmation Rates (Line) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
-        
-        {/* Chart 3: Grouped Bar Chart: Predicted vs Actual */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <TrendingUp size={16} />
-              <span>Predicted vs Actual Meal Attendance</span>
-            </div>
-            <span className="badge badge-success">Grouped Comparison</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={predicted_vs_actual}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="predicted_demand" name="ML Predicted Demand" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="actual_attendance" name="Actual Attendance" fill="#059669" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 4: RSVP Rate, Confirmation Rate, Cancellation Rate Over Time */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <CheckCircle2 size={16} />
-              <span>Student Attendance & Cancellation Rates (%)</span>
-            </div>
-            <span className="badge badge-neutral">Rate Metrics</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rates_over_time}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="rsvp_rate_pct" name="RSVP Rate %" stroke="#0ea5e9" strokeWidth={2} />
-                <Line type="monotone" dataKey="confirmation_rate_pct" name="Confirmation Rate %" stroke="#16a34a" strokeWidth={2} />
-                <Line type="monotone" dataKey="cancellation_rate_pct" name="Cancellation Rate %" stroke="#e11d48" strokeWidth={1.5} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Row 3: Day of Week Demand & Stacked Booking Status */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
-        
-        {/* Chart 5: Meal Bookings by Day of the Week */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <Calendar size={16} />
-              <span>Demand Distribution by Day of Week</span>
-            </div>
-            <span className="badge badge-neutral">Weekly Heat</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={bookings_by_dow}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="day_of_week" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="relative_index" name="Weekly Demand Volume" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="avg_waste_kg" name="Average Waste (kg)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 6: Stacked Bar Chart: Confirmed, Cancelled, Unconfirmed */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <Users size={16} />
-              <span>Stacked Status: Confirmed vs Cancelled vs Unconfirmed</span>
-            </div>
-            <span className="badge badge-neutral">Stacked Distribution</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stacked_booking_status}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Served" stackId="status" name="Served / Attended" fill="#15803d" />
-                <Bar dataKey="Cancelled" stackId="status" name="Cancelled / Opted Out" fill="#ef4444" />
-                <Bar dataKey="BookedPending" stackId="status" name="Booked (Pending)" fill="#f59e0b" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Row 4: Student Attendance vs Food Consumption (Line Chart) */}
+      {/* Row 2: Day of Week Demand Volume Comparison */}
       <div className="panel" style={{ marginBottom: 0 }}>
         <div className="panel-header">
           <div className="panel-header-title">
-            <TrendingUp size={16} />
-            <span>Student Attendance vs Food Consumption (kg)</span>
+            <Calendar size={16} />
+            <span>Demand Distribution by Day of Week</span>
           </div>
-          <span className="badge badge-neutral">Portion Correlation</span>
+          <span className="badge badge-neutral">Weekly Comparison</span>
         </div>
-        <div className="panel-body" style={{ height: '300px' }}>
+        <div className="panel-body" style={{ height: '280px' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={attendance_vs_consumption}>
+            <BarChart data={bookings_by_dow}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: 'Boarders Attending', angle: -90, position: 'insideLeft', fontSize: 11 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} label={{ value: 'Food Consumed (kg)', angle: 90, position: 'insideRight', fontSize: 11 }} />
+              <XAxis dataKey="day_of_week" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line yAxisId="left" type="monotone" dataKey="attendance_students" name="Boarders Attending" stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} />
-              <Line yAxisId="right" type="monotone" dataKey="food_consumption_kg" name="Food Consumed (kg)" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
+              <Bar dataKey="relative_index" name="Weekly Demand Volume" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="avg_waste_kg" name="Average Waste (kg)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>

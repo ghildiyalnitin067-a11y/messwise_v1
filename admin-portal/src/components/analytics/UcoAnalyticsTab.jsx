@@ -1,17 +1,13 @@
 import React from 'react';
 import { 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  Legend,
-  AreaChart,
-  Area 
+  Legend
 } from 'recharts';
 import { Droplets, CheckCircle2, Truck, Leaf, ShieldCheck, Factory } from 'lucide-react';
 
@@ -103,40 +99,15 @@ const UcoAnalyticsTab = ({ data, loading }) => {
         </div>
       </div>
 
-      {/* Row 1: Oil Generated, Collected & Processed (Line) + Destination Distribution (Bar) */}
+      {/* Basic Comparison Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
         
-        {/* Chart 1: Oil Generated, Collected, Processed Over Time */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <Droplets size={16} />
-              <span>Oil Generation, Collection & Processing Timeline</span>
-            </div>
-            <span className="badge badge-neutral">Batch History</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={oil_timeline}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis unit="kg" tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="recorded_generated_kg" name="Recorded (kg)" stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="collected_kg" name="Collected (kg)" stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="processed_kg" name="Processed (kg)" stroke="#15803d" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 2: Quantities by Repurposing Destination */}
+        {/* Chart 1: Quantities by Repurposing Destination */}
         <div className="panel" style={{ marginBottom: 0 }}>
           <div className="panel-header">
             <div className="panel-header-title">
               <Factory size={16} />
-              <span>Oil Quantities by Repurposing Method</span>
+              <span>Oil Quantities by Repurposing Method (Basic Comparison)</span>
             </div>
             <span className="badge badge-neutral">Circular Destination</span>
           </div>
@@ -155,12 +126,7 @@ const UcoAnalyticsTab = ({ data, loading }) => {
           </div>
         </div>
 
-      </div>
-
-      {/* Row 2: Stacked Status Breakdown & Emissions Avoided Trend */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
-        
-        {/* Chart 3: Stacked Bar Chart: Pending, Collected, Processed */}
+        {/* Chart 2: Status Breakdown */}
         <div className="panel" style={{ marginBottom: 0 }}>
           <div className="panel-header">
             <div className="panel-header-title">
@@ -171,37 +137,14 @@ const UcoAnalyticsTab = ({ data, loading }) => {
           </div>
           <div className="panel-body" style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={status_breakdown} layout="vertical">
+              <BarChart data={status_breakdown}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" unit="kg" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="status" width={180} tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="quantity_kg" name="Oil Mass (kg)" fill="#059669" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 4: KPI Trend: Emissions Avoided from Confirmed Processing */}
-        <div className="panel" style={{ marginBottom: 0 }}>
-          <div className="panel-header">
-            <div className="panel-header-title">
-              <Leaf size={16} />
-              <span>Emissions Avoided from Confirmed Processing</span>
-            </div>
-            <span className="badge badge-success">Clean Air Impact</span>
-          </div>
-          <div className="panel-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={emissions_avoided_trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="status" tick={{ fontSize: 10 }} />
                 <YAxis unit="kg" tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="co2_avoided_kg" name="Cumulative CO₂e Avoided (kg)" stroke="#16a34a" fill="#dcfce7" strokeWidth={2} />
-              </AreaChart>
+                <Bar dataKey="quantity_kg" name="Oil Mass (kg)" fill="#059669" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>

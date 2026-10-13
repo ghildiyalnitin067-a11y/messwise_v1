@@ -1,17 +1,13 @@
 import React from 'react';
 import { 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  Legend,
-  AreaChart,
-  Area
+  Legend
 } from 'recharts';
 import { Cpu, Zap, Activity, Target, ShieldCheck, Clock, Gauge, Award } from 'lucide-react';
 
@@ -155,39 +151,29 @@ const CoreIntelligenceDashboard = ({ mlData, carbonData, loading }) => {
 
       </div>
 
-      {/* ─── GRAPH 1: ACCURACY FOCUS (PREDICTED VS ACTUAL DEMAND TIMELINE) ─── */}
+      {/* ─── GRAPH 1: ACCURACY FOCUS (PREDICTED VS ACTUAL DEMAND COMPARISON) ─── */}
       <div className="panel" style={{ marginBottom: 0 }}>
         <div className="panel-header">
           <div className="panel-header-title">
             <Target size={18} style={{ color: '#10b981' }} />
             <span>Demand Prediction Accuracy &bull; Predicted vs Actual Attendance</span>
           </div>
-          <span className="badge badge-success">High Fidelity ({model_metadata.mean_accuracy_pct || 96.8}% Accuracy)</span>
+          <span className="badge badge-success">Basic Comparison ({model_metadata.mean_accuracy_pct || 96.8}% Accuracy)</span>
         </div>
         <div className="panel-body" style={{ height: '320px' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={predicted_vs_actual_trend}>
-              <defs>
-                <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0}/>
-                </linearGradient>
-                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
-                </linearGradient>
-              </defs>
+            <BarChart data={predicted_vs_actual_trend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-              <YAxis unit=" meals" domain={['dataMin - 50', 'dataMax + 50']} tick={{ fontSize: 11 }} />
+              <YAxis unit=" meals" tick={{ fontSize: 11 }} />
               <Tooltip 
                 contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} 
                 formatter={(val, name) => [`${val} meals`, name]}
               />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: '4px' }} />
-              <Area type="monotone" dataKey="predicted_demand" name="ML Predicted Demand" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPredicted)" />
-              <Area type="monotone" dataKey="actual_attendance" name="Actual Attendance (RSVP Served)" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorActual)" />
-            </AreaChart>
+              <Bar dataKey="predicted_demand" name="ML Predicted Demand" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="actual_attendance" name="Actual Attendance (Served)" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -258,42 +244,6 @@ const CoreIntelligenceDashboard = ({ mlData, carbonData, loading }) => {
           </div>
         </div>
 
-      </div>
-
-      {/* ─── GRAPH 4: ACCURACY, LATENCY & ENERGY STABILITY OVER TIME ─── */}
-      <div className="panel" style={{ marginBottom: 0 }}>
-        <div className="panel-header">
-          <div className="panel-header-title">
-            <Gauge size={18} style={{ color: '#0ea5e9' }} />
-            <span>Operational Stability &bull; Prediction Accuracy (%) vs Inference Latency (ms)</span>
-          </div>
-          <span className="badge badge-neutral">Production Runtime Stream</span>
-        </div>
-        <div className="panel-body" style={{ height: '300px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={accuracy_energy_latency_timeline}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-              <YAxis yAxisId="acc" domain={[80, 100]} unit="%" tick={{ fontSize: 11 }} label={{ value: 'Accuracy (%)', angle: -90, position: 'insideLeft', fontSize: 11 }} />
-              <YAxis yAxisId="lat" orientation="right" domain={[0, 1.2]} unit=" ms" tick={{ fontSize: 11 }} label={{ value: 'Latency (ms)', angle: 90, position: 'insideRight', fontSize: 11 }} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                formatter={(val, name) => [name.includes('Accuracy') ? `${val}%` : `${val} ms`, name]}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line yAxisId="acc" type="monotone" dataKey="accuracy_pct" name="Prediction Accuracy (%)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />
-              <Line yAxisId="lat" type="monotone" dataKey="latency_ms" name="Inference Latency (ms)" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div style={{ padding: '0.75rem 1.25rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem' }}>
-          <div>
-            <strong>Architecture:</strong> XGBoost Regressor (85 Estimators, Depth 4) &bull; <strong>Energy Constant:</strong> 2.75 µWh/query
-          </div>
-          <div style={{ color: '#15803d', fontWeight: 600 }}>
-            &bull; Operational Footprint: Negligible (0.00037 kg CO₂e / 1,000 calls)
-          </div>
-        </div>
       </div>
 
     </div>
